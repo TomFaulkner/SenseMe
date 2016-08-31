@@ -14,7 +14,7 @@ Sniffing the packets and documenting the protocol were the work of Bruce at http
 I'm new to Python, so there are probably poor coding standards in places, I'm sorry for that.
 
 ## Usage
-from sensemefan import SenseMeFan
+  from sensemefan import SenseMeFan
 
   def main():
     # Statically assign the fan? Probably not, but you would do it this way.
