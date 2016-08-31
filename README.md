@@ -34,7 +34,7 @@ I'm new to Python, so there are probably poor coding standards in places, I'm so
     # motor = fan.getfan()
     # print(motor)
 
-    # Toggle fan motor on/off
+    # Toggle light on/off
     # fan.lighttoggle()
 
     # want an increasing light effect? Do this.
@@ -52,4 +52,4 @@ I'm new to Python, so there are probably poor coding standards in places, I'm so
 
     return
 
-  main()
+    main()
