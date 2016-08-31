@@ -15,8 +15,8 @@ I'm new to Python, so there are probably poor coding standards in places, I'm so
 
 ## Usage
   
-  from sensemefan import SenseMeFan
-  def main():
+    from sensemefan import SenseMeFan
+    def main():
     # Statically assign the fan? Probably not, but you would do it this way.
     # fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
     
@@ -52,4 +52,4 @@ I'm new to Python, so there are probably poor coding standards in places, I'm so
 
     return
 
-main()
+  main()
