@@ -7,7 +7,7 @@ It might also be useful for controlling DIY projects as the protocol is very sim
 
 Sample usage is found in run.py
 
-Going forward, I expect to work this in with Flask to put on a VM to control the fan from a webpage on my phone or desktop. (Unfortunately, their app doesn't seem to broadcast properly so it doesn't work on my Nexus 6P. This issue is what lead to this project.)
+Going forward, I expect to work this in with Flask to put on a VM to control the fan from a webpage on my phone or desktop. 
 
 Sniffing the packets and documenting the protocol were the work of Bruce at http://bruce.pennypacker.org/tag/senseme-plugin/. Much of the code was based on his work on making an Indigo plugin for this fan: https://github.com/bpennypacker/SenseME-Indigo-Plugin
 
