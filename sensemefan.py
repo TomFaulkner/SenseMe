@@ -31,7 +31,7 @@ class SenseMeFan:
 
     def __sendcommand__(self, msg):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.sendto(msg.encode('utf-8'), (self.ip, 31415))
+        sock.sendto(msg.encode('utf-8'), (self.ip, self.PORT))
         return
 
     def __query__(self, msg):
@@ -67,6 +67,12 @@ class SenseMeFan:
         self.setspeed(int(self.fan['speed']) + incspeed)
         return
 
+
+    def decspeed(self, decspeed = 1):
+        self.getfan()
+        self.setspeed(int(self.fan['speed']) - decspeed)
+        return
+
     def setlight(self, light):
         if light > 16: # max light level, if receiving > 16 fan auto changes to 16
             light = 16
@@ -78,6 +84,11 @@ class SenseMeFan:
     def inclight(self, incbright = 1):
         self.getlight()
         self.setlight(int(self.light['brightness']) + incbright)
+        return
+
+    def declight(self, decbright = 1):
+        self.getlight()
+        self.setlight(int(self.light['brightness']) - decbright)
         return
 
     def fanoff(self):
@@ -127,6 +138,10 @@ class SenseMeFan:
     def getstate(self):
         self.getfan()
         self.getlight()
+
+    @property
+    def fan_speed(self):
+        return self.getfan()
 
     def listen(self):
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
