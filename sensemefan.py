@@ -42,7 +42,8 @@ class SenseMeFan:
         sock.send(msg.encode('utf-8'))
 
         try:
-            status = sock.recv(1024).decode('utf-8')
+            status = sock.recv(1048).decode('utf-8')
+	    print('Status: ' + status)
         except socket.timeout:
             print('Socket Timed Out')
         else:
@@ -59,8 +60,12 @@ class SenseMeFan:
             speed = 7
         elif speed < 0: # 0 also sets fan to off automatically
             speed = 0
-        self.__sendcommand__('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.__sendcommand__('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def incspeed(self, incspeed = 1):
         self.getfan()
@@ -78,8 +83,12 @@ class SenseMeFan:
             light = 16
         elif light < 0: # light 0 also automatically sets pwr = off
             light = 0
-        self.__sendcommand__('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.__sendcommand__('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def inclight(self, incbright = 1):
         self.getlight()
@@ -92,12 +101,20 @@ class SenseMeFan:
         return
 
     def fanoff(self):
-        self.__sendcommand__('<%s;FAN;PWR;OFF>' % self.name)
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):	
+        	self.__sendcommand__('<%s;FAN;PWR;OFF>' % self.name)
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def fanon(self):
-        self.__sendcommand__('<%s;FAN;PWR;ON>' % self.name)
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+       		self.__sendcommand__('<%s;FAN;PWR;ON>' % self.name)
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def fantoggle(self):
         self.getfan()
@@ -109,12 +126,20 @@ class SenseMeFan:
             return 'ON'
 
     def lightoff(self):
-        self.__sendcommand__('<%s;LIGHT;PWR;OFF>' % self.name)
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.__sendcommand__('<%s;LIGHT;PWR;OFF>' % self.name)
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def lighton(self):
-        self.__sendcommand__('<%s;LIGHT;PWR;ON>' % self.name)
-        return
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.__sendcommand__('<%s;LIGHT;PWR;ON>' % self.name)
+        	return
+	else:
+		print('Device Not Supported Yet')
 
     def lighttoggle(self):
         self.getlight()
@@ -126,14 +151,22 @@ class SenseMeFan:
             return 'ON'
 
     def getlight(self):
-        self.light['brightness'] = self.__query__('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name)
-        self.light['status'] = self.__query__('<%s;LIGHT;PWR;GET>' % self.name)
-        return self.light
+	# Commands for LSERIES fan only 
+	if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.light['brightness'] = self.__query__('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name)
+        	self.light['status'] = self.__query__('<%s;LIGHT;PWR;GET>' % self.name)
+        	return self.light
+	else:
+		print('Device Not Supported Yet')
 
     def getfan(self):
-        self.fan['speed'] = self.__query__('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
-        self.fan['status'] = self.__query__('<%s;FAN;PWR;GET>' % self.name)
-        return self.fan
+	# Commands for LSERIES fan only
+        if ( self.model == 'FAN' and self.series == 'LSERIES' ):
+        	self.fan['speed'] = self.__query__('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
+        	self.fan['status'] = self.__query__('<%s;FAN;PWR;GET>' % self.name)
+        	return self.fan
+	else:
+		print('Device Not Supported Yet')
 
     def getstate(self):
         self.getfan()
@@ -148,7 +181,7 @@ class SenseMeFan:
         sock.bind(('', 31415))
         for x in range(1, 30):
             m = sock.recvfrom(1024)
-            print(m)
+            #print(m)
 
     def discover(self):
         data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
@@ -162,16 +195,17 @@ class SenseMeFan:
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('', 31415))
-        m = s.recvfrom(1024)
+        m = s.recvfrom(2048)
         print(m)
         if not m:
             pass
         else:
-            self.details = m[0].decode('utf-8')
-            res = re.match('\((.*);DEVICE;ID;(.*);FAN,HAIKU,(.*)\)',self.details)
+            self.details = m[0].decode('utf-8') 
+            res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)',self.details)
             self.name = res.group(1)
             self.mac = res.group(2)
-            self.series = res.group(3)
+            self.model = res.group(3)
+            self.series = res.group(4)
             self.ip = m[1][0]
             # print('ip: ' + self.ip)
             # print('details: ' + self.details)
