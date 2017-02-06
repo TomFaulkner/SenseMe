@@ -3,8 +3,21 @@ from requests_toolbelt.multipart import decoder
 import json
 from pprint import pprint
 
+#For structures
+from collections import namedtuple
+
 #Import Haiku library
 from sensemefan import SenseMeFan
+
+
+# Global values
+haiku_data = namedtuple("HaikuData", "ip_addr name model series")
+room1_uuid = '81ba6448-c094-4da2-8cc3-6aa4d003764b'
+
+living_room = haiku_data(ip_addr = "10.10.1.117", name = "Drew\'s Room Fan", model = "FAN", series = "LSERIES")
+# Statically assign the fan? Probably not, but you would do it this way:
+# fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
+fan = SenseMeFan(living_room.ip_addr, living_room.name, living_room.model, living_room.series)
 
 app = Flask(__name__)
 
@@ -21,29 +34,33 @@ def add_message(uuid):
    payload = request.values.get('payload')
    # Converts the data back into JSON format to easily seperate out values
    json_data = json.loads(payload)
-  
+   
    # Breakout important data from the JSON
+   event = json_data["event"]
    username = json_data["Account"]["title"]
    server = json_data["Server"]["title"]
    player = json_data["Player"]["title"]
    player_uuid = json_data["Player"]["uuid"]
    
-   print "Username: " + username
-   print "Server: " + server
-   print "Player: " + player
-   print "Player UUID: " + player_uuid
-   print "End!"
+   #print "Event: " + event
+   #print "Username: " + username
+   #print "Server: " + server
+   #print "Player: " + player
+   #print "Player UUID: " + player_uuid
+   #print "End!"
   
-   if username == 'dcplaya':
-    	# Statically assign the fan? Probably not, but you would do it this way:
-    	# fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
-    	fan = SenseMeFan('10.10.1.117', 'Drew\'s Room Fan', 'FAN', 'LSERIES')
-
-       	# Get Light level
-    	light = fan.getlight()
-   	print(light)
-	print "Success!"
-
+   # Dim the lights if media is playing or resuming
+   if ( ( event == 'media.play' ) or ( event == 'media.resume' ) ) and ( player_uuid == room1_uuid ) :
+      # Get Light level
+      print "Dimming Lights"
+      light = fan.getlight()
+	
+   # Resume the lights if media is stopped or paused
+   if ( ( event == 'media.stop' ) or ( event == 'media.pause' ) ) and ( player_uuid == room1_uuid ) :
+      # Get Light level
+	  print "Resuming Lights"
+	  light = fan.getlight()
+	
    return jsonify({"uuid":uuid})
 
 if __name__ == '__main__':
