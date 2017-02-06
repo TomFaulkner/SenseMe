@@ -12,7 +12,7 @@ https://github.com/bpennypacker/SenseME-Indigo-Plugin
 
 class SenseMeFan:
 
-    def __init__(self, ip='', name=''):
+    def __init__(self, ip='', name='', model='', series=''):
         self.PORT = 31415
 
         if not ip or not name:
@@ -22,7 +22,8 @@ class SenseMeFan:
             self.name = name
             self.mac = ''
             self.details = ''
-            self.series = ''
+            self.model = model
+            self.series = series
 
         self.light = {'brightness': None, 'status': None}
         self.fan = {'speed': None, 'status': None}
@@ -195,7 +196,7 @@ class SenseMeFan:
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.bind(('', 31415))
-        m = s.recvfrom(2048)
+        m = s.recvfrom(1048)
         print(m)
         if not m:
             pass
