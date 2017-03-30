@@ -1,9 +1,11 @@
-from sensemefan import SenseMeFan
+from SenseMe.senseme import SenseMe
+
 
 def main():
     # Statically assign the fan? Probably not, but you would do it this way:
-    # fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
-    fan = SenseMeFan()
+    fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
+    # fan = SenseMeFan(name="Living Room Fan")
+    # fan = SenseMeFan()
 
     # Turn the light off
     # fan.lightoff()
@@ -17,7 +19,7 @@ def main():
     # print(motor)
 
     # Toggle light status
-    # fan.lighttoggle()
+    fan.light_toggle()
 
     # want an increasing light effect? Do this.
     # But, really, probably don't, I don't think they intended strobe effects.
@@ -33,6 +35,5 @@ def main():
     # wouldn't suggest using it for anything else
     # fan.listen()
 
-    return
 
 main()

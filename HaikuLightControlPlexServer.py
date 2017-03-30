@@ -1,14 +1,9 @@
-from flask import Flask, request, jsonify
-from requests_toolbelt.multipart import decoder
 import json
-from pprint import pprint
-
-#For structures
 from collections import namedtuple
 
-#Import Haiku library
-from sensemefan import SenseMeFan
+from flask import Flask, request, jsonify
 
+from SenseMe.senseme import SenseMe
 
 # Global values
 haiku_data = namedtuple("HaikuData", "ip_addr name model series")
@@ -17,7 +12,7 @@ room1_uuid = '81ba6448-c094-4da2-8cc3-6aa4d003764b'
 living_room = haiku_data(ip_addr = "10.10.1.117", name = "Drew\'s Room Fan", model = "FAN", series = "LSERIES")
 # Statically assign the fan? Probably not, but you would do it this way:
 # fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
-fan = SenseMeFan(living_room.ip_addr, living_room.name, living_room.model, living_room.series)
+fan = SenseMe(living_room.ip_addr, living_room.name, living_room.model, living_room.series)
 
 app = Flask(__name__)
 
@@ -53,13 +48,13 @@ def add_message(uuid):
    if ( ( event == 'media.play' ) or ( event == 'media.resume' ) ) and ( player_uuid == room1_uuid ) :
       # Get Light level
       print "Dimming Lights"
-      light = fan.getlight()
+      light = fan.get_light()
 	
    # Resume the lights if media is stopped or paused
    if ( ( event == 'media.stop' ) or ( event == 'media.pause' ) ) and ( player_uuid == room1_uuid ) :
       # Get Light level
 	  print "Resuming Lights"
-	  light = fan.getlight()
+	  light = fan.get_light()
 	
    return jsonify({"uuid":uuid})
 
