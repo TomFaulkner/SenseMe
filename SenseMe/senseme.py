@@ -10,13 +10,13 @@ Source can be found at https://github.com/TomFaulkner/SenseMe
 import logging
 import re
 import socket
-
+import time
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class SenseMe:
-    def __init__(self, ip='', name='', model='', series=''):
+    def __init__(self, ip='', name='', model='', series='', mac=''):
         self.PORT = 31415
 
         if not ip or not name:
@@ -24,7 +24,7 @@ class SenseMe:
         else:
             self.ip = ip
             self.name = name
-            self.mac = ''
+            self.mac = mac
             self.details = ''
             self.model = model
             self.series = series
@@ -51,12 +51,12 @@ class SenseMe:
 
         try:
             status = sock.recv(1048).decode('utf-8')
-            print('Status: ' + status)
+            logging.info('Status: ' + status)
         except socket.timeout:
-            print('Socket Timed Out')
+            logging.error('Socket Timed Out')
         else:
             sock.close()
-            print(str(status))
+            logging.info(str(status))
             match_obj = re.match('\(.*;([^;]+)\)', status)
             if match_obj:
                 return match_obj.group(1)
@@ -135,6 +135,7 @@ class SenseMe:
     def get_fan(self):
         self.fan['speed'] = self.__query__('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
         self.fan['status'] = self.__query__('<%s;FAN;PWR;GET>' % self.name)
+        return self.fan
 
     def __get_state__(self):
         self.get_fan()
@@ -154,7 +155,7 @@ class SenseMe:
         sock.bind(('', 31415))
         for x in range(1, 30):
             m = sock.recvfrom(1024)
-            print(m)
+            logging.info(m)
 
     def discover(self):
         data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
@@ -169,10 +170,9 @@ class SenseMe:
         try:
             s.bind(('', self.PORT))
             m = s.recvfrom(1024)
-            print(m)
+            logging.info(m)
             if not m:
-                print('not m')
-                pass
+                logging.error("Didn't receive response.")
             else:
                 self.details = m[0].decode('utf-8')
                 res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', self.details)
@@ -181,8 +181,60 @@ class SenseMe:
                 self.model = res.group(3)
                 self.series = res.group(4)
                 self.ip = m[1][0]
-                print(self.name, self.mac, self.model, self.series)
+                logging.info(self.name, self.mac, self.model, self.series)
         except OSError as e:
             # Address already in use
             logging.critical("Port is in use or could not be opened. Is another instance running?\n%s" % e)
             raise OSError
+
+
+class Discovery:
+    def __init__(self):
+        self.PORT = 31415
+
+    def discover(self, devices_to_find=None, time_to_wait=None):
+        if not devices_to_find:
+            devices_to_find = 3
+        if not time_to_wait:
+            time_to_wait = 5
+
+        data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('', self.PORT))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        logging.debug("Sending broadcast.")
+        s.sendto(data, ('<broadcast>', self.PORT))
+        logging.debug("Listening...")
+        devices = []
+        start_time = time.time()
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            s.bind(('', self.PORT))
+            s.settimeout(2)
+            while True:
+                try:
+                    message = s.recvfrom(1024)
+                except OSError:
+                    # timeout occurred
+                    message = ''
+                if message:
+                    logging.info("Received a message")
+                    message_decoded = message[0].decode('utf-8')
+                    res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', message_decoded)
+                    name = res.group(1)
+                    mac = res.group(2)
+                    model = res.group(3)
+                    series = res.group(4)
+                    ip = message[1][0]
+                    devices.append(SenseMe(ip=ip, name=name, model=model, series=series, mac=mac))
+
+                time.sleep(.5)
+                if start_time + time_to_wait < time.time() or len(devices) >= devices_to_find:
+                    logging.info("time_to_wait exceeded or devices_to_find met")
+                    break
+            return devices
+        except OSError:
+            # couldn't get port
+            raise OSError("Couldn't get port 31415")
+        finally:
+            s.close()
