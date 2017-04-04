@@ -3,9 +3,9 @@ from SenseMe.senseme import SenseMe
 
 def main():
     # Statically assign the fan? Probably not, but you would do it this way:
-    fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
+    # fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
     # fan = SenseMeFan(name="Living Room Fan")
-    # fan = SenseMeFan()
+    fan = SenseMe()
 
     # Turn the light off
     # fan.lightoff()
