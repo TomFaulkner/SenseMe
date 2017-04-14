@@ -34,7 +34,12 @@ class SenseMe:
 
         # self.getstate()
 
-    def __send_command__(self, msg):
+    def __repr__(self):
+        return str({'name': self.name, 'ip': self.ip, 'mac': self.mac, 'model': self.model, 'series': self.series,
+                    'light': self.light, 'fan': self.fan})
+
+
+    def _send_command(self, msg):
         sock = socket.socket()
         sock.settimeout(5)
 
@@ -42,7 +47,7 @@ class SenseMe:
         sock.send(msg.encode('utf-8'))
         sock.close()
 
-    def __query__(self, msg):
+    def _query(self, msg):
         sock = socket.socket()
         sock.settimeout(5)
 
@@ -68,7 +73,7 @@ class SenseMe:
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
-        self.__send_command__('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
+        self._send_command('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
 
     def inc_speed(self, increment=1):
         self.get_fan()
@@ -85,7 +90,7 @@ class SenseMe:
             light = 16
         elif light < 0:  # light 0 also automatically sets pwr = off
             light = 0
-        self.__send_command__('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
+        self._send_command('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
 
     def inc_light(self, increment=1):
         self.get_light()
@@ -98,10 +103,10 @@ class SenseMe:
         return
 
     def fan_off(self):
-        self.__send_command__('<%s;FAN;PWR;OFF>' % self.name)
+        self._send_command('<%s;FAN;PWR;OFF>' % self.name)
 
     def fan_on(self):
-        self.__send_command__('<%s;FAN;PWR;ON>' % self.name)
+        self._send_command('<%s;FAN;PWR;ON>' % self.name)
 
     def fan_toggle(self):
         self.get_fan()
@@ -113,10 +118,10 @@ class SenseMe:
             return 'ON'
 
     def light_off(self):
-            self.__send_command__('<%s;LIGHT;PWR;OFF>' % self.name)
+            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
 
     def light_on(self):
-        self.__send_command__('<%s;LIGHT;PWR;ON>' % self.name)
+        self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
 
     def light_toggle(self):
         self.get_light()
@@ -128,13 +133,13 @@ class SenseMe:
             return 'ON'
 
     def get_light(self):
-        self.light['brightness'] = self.__query__('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name)
-        self.light['status'] = self.__query__('<%s;LIGHT;PWR;GET>' % self.name)
+        self.light['brightness'] = self._query('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name)
+        self.light['status'] = self._query('<%s;LIGHT;PWR;GET>' % self.name)
         return self.light
 
     def get_fan(self):
-        self.fan['speed'] = self.__query__('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
-        self.fan['status'] = self.__query__('<%s;FAN;PWR;GET>' % self.name)
+        self.fan['speed'] = self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
+        self.fan['status'] = self._query('<%s;FAN;PWR;GET>' % self.name)
         return self.fan
 
     def __get_state__(self):
