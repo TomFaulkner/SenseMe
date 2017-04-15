@@ -16,11 +16,14 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 class SenseMe:
-    def __init__(self, ip='', name='', model='', series='', mac=''):
-        self.PORT = 31415
+    PORT = 31415
 
+    def __init__(self, ip='', name='', model='', series='', mac=''):
         if not ip or not name:
-            self.discover()
+            # if ip or name are unknown, discover the device
+            # if one is known but not the other a specific device will discover, if not one device, or none,
+            #  will discover
+            self.discover_single_device()
         else:
             self.ip = ip
             self.name = name
@@ -29,15 +32,146 @@ class SenseMe:
             self.model = model
             self.series = series
 
-        self.light = {'brightness': None, 'status': None}
-        self.fan = {'speed': None, 'status': None}
-
-        # self.getstate()
-
     def __repr__(self):
         return str({'name': self.name, 'ip': self.ip, 'mac': self.mac, 'model': self.model, 'series': self.series,
-                    'light': self.light, 'fan': self.fan})
+                    'light': self.brightness, 'fan': self.speed})
 
+    def __str__(self):
+        return 'SenseMe Device: {}, Series: {}. Speed: {}. Brightness: {}'.format(self.name, self.series,
+                                                                                  self.speed,
+                                                                                  self.brightness)
+
+    @property
+    def speed(self):
+        return int(self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name))
+
+    @speed.setter
+    def speed(self, speed):
+        if speed > 7:  # max speed is 7, fan corrects to 7
+            speed = 7
+        elif speed < 0:  # 0 also sets fan to off automatically
+            speed = 0
+        self._send_command('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
+
+    def inc_speed(self, increment=1):
+        self.speed += increment
+
+    def dec_speed(self, decrement=1):
+        self.speed -= decrement
+
+    @property
+    def brightness(self):
+        return int(self._query('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name))
+
+    @brightness.setter
+    def brightness(self, light):
+        if light > 16:  # max light level, if receiving > 16 fan auto changes to 16
+            light = 16
+        elif light < 0:  # light 0 also automatically sets pwr = off
+            light = 0
+        self._send_command('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
+
+    def inc_brightness(self, increment=1):
+        self.brightness += increment
+
+    def dec_brightness(self, decrement=1):
+        self.brightness += decrement
+
+    @property
+    def fan_powered_on(self):
+        if self._query('<%s;FAN;PWR;GET>' % self.name) == 'ON':
+            return True
+        else:
+            return False
+
+    @fan_powered_on.setter
+    def fan_powered_on(self, power_on=True):
+        if power_on:
+            self._send_command('<%s;FAN;PWR;ON>' % self.name)
+        else:
+            self._send_command('<%s;FAN;PWR;OFF>' % self.name)
+
+    def fan_toggle(self):
+        if self.fan_powered_on:
+            self.fan_powered_on = False
+            return False
+        else:
+            self.fan_powered_on = True
+            return True
+
+    @property
+    def light_powered_on(self):
+        if self._query('<%s;LIGHT;PWR;GET>' % self.name) == 'ON':
+            return True
+        else:
+            return False
+
+    @light_powered_on.setter
+    def light_powered_on(self, power_on=True):
+        if power_on:
+            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
+        else:
+            self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
+
+    def light_toggle(self):
+        if self.light_powered_on:
+            self.light_powered_on = False
+            return False
+        else:
+            self.light_powered_on = True
+            return True
+
+    @staticmethod
+    def listen():
+        """ Listens for broadcasts and logs them for debugging purposes """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('', 31415))
+        for x in range(1, 30):
+            m = sock.recvfrom(1024)
+            logging.info(m)
+
+    def discover_single_device(self):
+        """ Device discovery
+         Called during __init__ if the device name or IP address is missing.
+
+        This function will discover only the first device to respond if both name and IP were not provided
+         on instantiation. If there is only one device in the home this will work well.
+         Otherwise, use the discover function of the module rather than this one.
+
+        If the class is instantiated without an IP Address or a Name """
+        data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(('', 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        logging.debug("Sending broadcast.")
+        s.sendto(data, ('<broadcast>', self.PORT))
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        logging.debug("Listening...")
+        try:
+            s.bind(('', self.PORT))
+        except OSError as e:
+            # Address already in use
+            logging.critical("Port is in use or could not be opened. Is another instance running?\n%s" % e)
+            raise OSError
+        else:
+            try:
+                m = s.recvfrom(1024)
+                logging.info(m)
+                if not m:
+                    logging.error("Didn't receive response.")
+                else:
+                    self.details = m[0].decode('utf-8')
+                    res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', self.details)
+                    self.name = res.group(1)
+                    self.mac = res.group(2)
+                    self.model = res.group(3)
+                    self.series = res.group(4)
+                    self.ip = m[1][0]
+                    logging.info(self.name, self.mac, self.model, self.series)
+            except OSError as e:
+                logging.critical("No device was found.\n%s" % e)
+                raise OSError
 
     def _send_command(self, msg):
         sock = socket.socket()
@@ -60,6 +194,7 @@ class SenseMe:
         except socket.timeout:
             logging.error('Socket Timed Out')
         else:
+            # TODO: this function shouldn't return data or False, handle this better
             sock.close()
             logging.info(str(status))
             match_obj = re.match('\(.*;([^;]+)\)', status)
@@ -68,178 +203,51 @@ class SenseMe:
             else:
                 return False
 
-    def set_speed(self, speed):
-        if speed > 7:  # max speed is 7, fan corrects to 7
-            speed = 7
-        elif speed < 0:  # 0 also sets fan to off automatically
-            speed = 0
-        self._send_command('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
 
-    def inc_speed(self, increment=1):
-        self.get_fan()
-        self.set_speed(int(self.fan['speed']) + increment)
-        return
+def discover(devices_to_find=None, time_to_wait=None):
+    port = 31415
+    if not devices_to_find:
+        devices_to_find = 3
+    if not time_to_wait:
+        time_to_wait = 5
 
-    def dec_speed(self, decrement=1):
-        self.get_fan()
-        self.set_speed(int(self.fan['speed']) - decrement)
-        return
+    data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.bind(('', port))
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    logging.debug("Sending broadcast.")
+    s.sendto(data, ('<broadcast>', port))
+    logging.debug("Listening...")
+    devices = []
+    start_time = time.time()
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.bind(('', port))
+        s.settimeout(2)
+        while True:
+            try:
+                message = s.recvfrom(1024)
+            except OSError:
+                # timeout occurred
+                message = b''
+            if message:
+                logging.info("Received a message")
+                message_decoded = message[0].decode('utf-8')
+                res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', message_decoded)
+                name = res.group(1)
+                mac = res.group(2)
+                model = res.group(3)
+                series = res.group(4)
+                ip = message[1][0]
+                devices.append(SenseMe(ip=ip, name=name, model=model, series=series, mac=mac))
 
-    def set_light(self, light):
-        if light > 16:  # max light level, if receiving > 16 fan auto changes to 16
-            light = 16
-        elif light < 0:  # light 0 also automatically sets pwr = off
-            light = 0
-        self._send_command('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
-
-    def inc_light(self, increment=1):
-        self.get_light()
-        self.set_light(int(self.light['brightness']) + increment)
-        return
-
-    def dec_light(self, decrement=1):
-        self.get_light()
-        self.set_light(int(self.light['brightness']) - decrement)
-        return
-
-    def fan_off(self):
-        self._send_command('<%s;FAN;PWR;OFF>' % self.name)
-
-    def fan_on(self):
-        self._send_command('<%s;FAN;PWR;ON>' % self.name)
-
-    def fan_toggle(self):
-        self.get_fan()
-        if self.fan['status'] == 'ON':
-            self.fan_off()
-            return 'OFF'
-        else:
-            self.fan_on()
-            return 'ON'
-
-    def light_off(self):
-            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
-
-    def light_on(self):
-        self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
-
-    def light_toggle(self):
-        self.get_light()
-        if self.light['status'] == 'ON':
-            self.light_off()
-            return 'OFF'
-        else:
-            self.light_on()
-            return 'ON'
-
-    def get_light(self):
-        self.light['brightness'] = self._query('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name)
-        self.light['status'] = self._query('<%s;LIGHT;PWR;GET>' % self.name)
-        return self.light
-
-    def get_fan(self):
-        self.fan['speed'] = self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
-        self.fan['status'] = self._query('<%s;FAN;PWR;GET>' % self.name)
-        return self.fan
-
-    def __get_state__(self):
-        self.get_fan()
-        self.get_light()
-
-    @property
-    def fan_speed(self):
-        return self.get_fan()
-
-    @property
-    def light_level(self):
-        return self.get_light()
-
-    @staticmethod
-    def listen():
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('', 31415))
-        for x in range(1, 30):
-            m = sock.recvfrom(1024)
-            logging.info(m)
-
-    def discover(self):
-        data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        logging.debug("Sending broadcast.")
-        s.sendto(data, ('<broadcast>', self.PORT))
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        logging.debug("Listening...")
-        try:
-            s.bind(('', self.PORT))
-            m = s.recvfrom(1024)
-            logging.info(m)
-            if not m:
-                logging.error("Didn't receive response.")
-            else:
-                self.details = m[0].decode('utf-8')
-                res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', self.details)
-                self.name = res.group(1)
-                self.mac = res.group(2)
-                self.model = res.group(3)
-                self.series = res.group(4)
-                self.ip = m[1][0]
-                logging.info(self.name, self.mac, self.model, self.series)
-        except OSError as e:
-            # Address already in use
-            logging.critical("Port is in use or could not be opened. Is another instance running?\n%s" % e)
-            raise OSError
-
-
-class Discovery:
-    def __init__(self):
-        self.PORT = 31415
-
-    def discover(self, devices_to_find=None, time_to_wait=None):
-        if not devices_to_find:
-            devices_to_find = 3
-        if not time_to_wait:
-            time_to_wait = 5
-
-        data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', self.PORT))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        logging.debug("Sending broadcast.")
-        s.sendto(data, ('<broadcast>', self.PORT))
-        logging.debug("Listening...")
-        devices = []
-        start_time = time.time()
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        try:
-            s.bind(('', self.PORT))
-            s.settimeout(2)
-            while True:
-                try:
-                    message = s.recvfrom(1024)
-                except OSError:
-                    # timeout occurred
-                    message = ''
-                if message:
-                    logging.info("Received a message")
-                    message_decoded = message[0].decode('utf-8')
-                    res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', message_decoded)
-                    name = res.group(1)
-                    mac = res.group(2)
-                    model = res.group(3)
-                    series = res.group(4)
-                    ip = message[1][0]
-                    devices.append(SenseMe(ip=ip, name=name, model=model, series=series, mac=mac))
-
-                time.sleep(.5)
-                if start_time + time_to_wait < time.time() or len(devices) >= devices_to_find:
-                    logging.info("time_to_wait exceeded or devices_to_find met")
-                    break
-            return devices
-        except OSError:
-            # couldn't get port
-            raise OSError("Couldn't get port 31415")
-        finally:
-            s.close()
+            time.sleep(.5)
+            if start_time + time_to_wait < time.time() or len(devices) >= devices_to_find:
+                logging.info("time_to_wait exceeded or devices_to_find met")
+                break
+        return devices
+    except OSError:
+        # couldn't get port
+        raise OSError("Couldn't get port 31415")
+    finally:
+        s.close()

@@ -50,14 +50,14 @@ def llevel(level):
 
 @app.route("/light/increase")
 def inclight():
-    fan.inc_light()
+    fan.inc_brightness()
     flask.flash('Increased Light Level')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/decrease")
 def declight():
-    fan.dec_light()
+    fan.dec_brightness()
     flask.flash('Decreased Light Level')
     return flask.redirect(flask.url_for('index'))
 
