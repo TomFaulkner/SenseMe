@@ -14,6 +14,7 @@ Sniffing the packets and documenting the protocol were the work of Bruce at http
 I'm new to Python, so there are probably poor coding standards in places, I'm sorry for that.
 
 ## Usage
+Please note that the usage and run.py are not up to date with the recent update. Doc strings are not yet present, but will be soon-ish. Functions names should be obvious though, so for now, use dir(SenseMe), or read senseme.py to get methods.
   
     from sensemefan import SenseMeFan
     def main():

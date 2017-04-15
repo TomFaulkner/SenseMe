@@ -163,6 +163,7 @@ class SenseMe:
                 else:
                     self.details = m[0].decode('utf-8')
                     res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', self.details)
+                    # TODO: Parse this properly rather than regex
                     self.name = res.group(1)
                     self.mac = res.group(2)
                     self.model = res.group(3)
@@ -234,6 +235,7 @@ def discover(devices_to_find=None, time_to_wait=None):
                 logging.info("Received a message")
                 message_decoded = message[0].decode('utf-8')
                 res = re.match('\((.*);DEVICE;ID;(.*);(.*),(.*)\)', message_decoded)
+                # TODO: Parse this properly rather than regex
                 name = res.group(1)
                 mac = res.group(2)
                 model = res.group(3)
