@@ -1,6 +1,6 @@
 import flask
 
-from SenseMe.senseme import SenseMe
+from senseme.senseme import SenseMe
 
 # Statically assign the fan? Probably not, but you would do it this way:
 # fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
