@@ -7,12 +7,55 @@ https://github.com/bpennypacker/SenseME-Indigo-Plugin
 Source can be found at https://github.com/TomFaulkner/SenseMe
 """
 
+import json
 import logging
 import re
 import socket
 import time
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
+
+
+__author__ = 'Tom Faulkner'
+
+
+class MWT(object):
+    """Memoize With Timeout"""
+    # https://code.activestate.com/recipes/325905-memoize-decorator-with-timeout/
+    _caches = {}
+    _timeouts = {}
+
+    def __init__(self,timeout=2):
+        self.timeout = timeout
+
+    def collect(self):
+        """Clear cache of results which have timed out"""
+        for func in self._caches:
+            cache = {}
+            for key in self._caches[func]:
+                if (time.time() - self._caches[func][key][1]) < self._timeouts[func]:
+                    cache[key] = self._caches[func][key]
+            self._caches[func] = cache
+
+    def __call__(self, f):
+        self.cache = self._caches[f] = {}
+        self._timeouts[f] = self.timeout
+
+        def func(*args, **kwargs):
+            kw = sorted(kwargs.items())
+            key = (args, tuple(kw))
+            try:
+                v = self.cache[key]
+                logging.info('Pulled from cache')
+                if (time.time() - v[1]) > self.timeout:
+                    raise KeyError
+            except KeyError:
+                logging.info('Ran function')
+                v = self.cache[key] = f(*args,**kwargs),time.time()
+            return v[0]
+        func.func_name = f.__name__
+
+        return func
 
 
 class SenseMe:
@@ -54,7 +97,7 @@ class SenseMe:
                     'light': self.brightness, 'fan': self.speed})
 
     def __str__(self):
-        return 'senseme Device: {}, Series: {}. Speed: {}. Brightness: {}'.format(self.name, self.series,
+        return 'SenseMe Device: {}, Series: {}. Speed: {}. Brightness: {}'.format(self.name, self.series,
                                                                                   self.speed,
                                                                                   self.brightness)
 
@@ -103,6 +146,7 @@ class SenseMe:
 
     @fan_powered_on.setter
     def fan_powered_on(self, power_on=True):
+        """ Change fan power status, bool. """
         if power_on:
             self._send_command('<%s;FAN;PWR;ON>' % self.name)
         else:
@@ -118,7 +162,9 @@ class SenseMe:
 
     @property
     def whoosh(self):
-        return ''
+        """ This can have a ten second delay since there is no known one item 
+         request to retrieve status"""
+        return self.get_attribute('FAN;WHOOSH;STATUS')
 
     @whoosh.setter
     def whoosh(self, whoosh_on):
@@ -246,7 +292,7 @@ class SenseMe:
         sock.send(msg.encode('utf-8'))
 
         messages = []
-        timeout_occured = False
+        timeout_occurred = False
         while True:
             try:
                 recv = sock.recv(1048).decode('utf-8')
@@ -255,48 +301,123 @@ class SenseMe:
             except socket.timeout:
                 logging.info('Socket Timed Out')
                 # most likely this means no more data, give it one more iter
-                if timeout_occured:
+                if timeout_occurred:
                     break
                 else:
-                    timeout_occured = True
+                    timeout_occurred = True
             else:
                 logging.info(str(recv))
         sock.close()
         return messages
 
-    def _get_all(self):
-        """ TODO: finish function
-        This function is not complete, and shouldn't yet be used, but I wanted to get changes up to git tonight
-        
-        Plan is to return a dict of dicts of dicts... to represent all values in getall, handling some special,
-        as they are inconsistent on the format. That is, the data values aren't limited to the last segment.
-        
-        Example: (Living Room Fan;NW;PARAMS;ACTUAL;192.168.1.50;255.255.255.0;192.168.1.1)
+    @MWT(timeout=30)
+    def _get_all_request(self):
+        return self.send_raw('<%s;GETALL>' % self.name)
 
-        :return: 
+    def _get_all(self):
+        """ Get all parameters from the fan <%s;GETALL>. This, due to Haiku's API doesn't return
+         all parameters, but it gets most of them.
+        
+        Method is marked internal, but could be useful for troubleshooting. Suggested way to get to
+         this data is to use the get_attribute method. Requesting the desired parameter.
+         
+        This data is cache for 30 seconds to avoid the ten seconds it takes to run and to reduce 
+         requests sent to the fan.
+
+        :return: List of [almost] all fan data.
         """
-        results = self.send_raw('<%s;GETALL>' % self.name)
+        results = self._get_all_request()
+
         # fix double results
         extra_rows = []
-        for result in results:
+        for idx, result in enumerate(results):
             if ')(' in result:
                 halves = result.split(')(')
-                result = result.replace(halves[1], ')')
+                results[idx] = result.replace(halves[1], ')')
                 extra_rows.append(halves[1])
         results.extend(extra_rows)
 
         res_dict = {}
         for result in results:
             result = result.replace('(', '').replace(')', '')
-            _, category, attribute, values = result.split(';', 3)
-            if category not in res_dict:
-                res_dict['category'] = {}
-            if attribute not in res_dict[category]:
-                res_dict[category][attribute] = {}
-            if len(values.split(';')) > 1:
-                values = {values.split(';')[0]: values.split(';')[1]}
-            res_dict[category] = {attribute: values}
-        # return res_dict
+            _, result = result.split(';', 1)  # remove device name (Living Room Fan)
+
+            # handle these manually due to multiple values in result
+            if 'BOOKENDS' in result:  # FAN and LIGHT both have BOOKENDS attributes
+                device, low, high = result.rsplit(';', 2)
+                res_dict[device] = (low, high)
+            elif 'NW;PARAMS;ACTUAL' in result:
+                # ip, sn, gw = result.rsplit(';', 2)
+                res_dict['NW;PARAMS;ACTUAL'] = (result.rsplit(';', 3))[1:]
+            else:
+                category, value = result.rsplit(';', 1)
+                res_dict[category] = value
+        return res_dict
+
+    def get_attribute(self, attribute):
+        """
+        Given a string in the format NW;PARAMS;ACTUAL returns parameter value.
+        There is a 30 second cache on the GETALL that this pulls from to speed things up and to
+         avoid hammering the fan with requests.
+         
+        Raises KeyError if key doesn't exist
+        
+        See KNOWN_ATTRIBUTES for full list of known attributes
+        
+        Anything handled specifically in a property is better retrieved that way as it returns within
+         a second, as where this will usually take ten seconds if not cached.
+         
+        Example:
+          get_attribute('NW;PARAMS;ACTUAL')
+          ['192.168.1.50', '255.255.255.0', '192.168.1.1']
+        :param attribute: The attribute you seek
+        :return: The value you find
+        """
+        if attribute == 'SNSROCC;STATUS':  # doesn't get retrieeved in get_all
+            return self._query('<%s;SNSROCC;STATUS;GET>' % self.name)
+        else:
+            response_dict = self._get_all()
+        return response_dict[attribute]
+
+    def get_all_nested(self):
+        def nest(existing, keys, value):
+            key, *keys = keys
+            if keys:
+                if key not in existing:
+                    existing[key] = {}
+                nest(existing[key], keys, value)
+            else:
+                existing[key] = value
+
+        results = self._get_all_request()
+        # fix double results
+        extra_rows = []
+        for result in results:
+            if ')(' in result:
+                halves = result.split(')(')
+                # result = result.replace(halves[1], ')')
+                extra_rows.append(halves[1])
+        results.extend(extra_rows)
+        cleaned = [x.replace('(', '').replace(')', '') for x in results]
+
+        for idx, result in enumerate(cleaned):
+            if 'BOOKENDS' in result:
+                device, low, high = result.rsplit(';', 2)
+                cleaned[idx] = '{};{},{}'.format(device, low, high)
+            elif 'NW;PARAMS;ACTUAL' in result:
+                nw_params_actual, ip, sn, gw = result.rsplit(';', 3)
+                cleaned[idx] = '{};{},{},{}'.format(nw_params_actual, ip, sn, gw)
+
+        data = [x.split(';')[1:] for x in cleaned]
+        d = {}
+        for *keys, value in data:
+            nest(d, keys, value)
+        return d
+
+    @property
+    def json(self):
+        """ Export all fan details to json """
+        return json.dumps(self.get_all_nested())
 
     @staticmethod
     def _parse_values(line):
@@ -353,3 +474,58 @@ def discover(devices_to_find=None, time_to_wait=None):
         raise OSError("Couldn't get port 31415")
     finally:
         s.close()
+
+# known attributes for reference purposes only
+KNOWN_ATTRIBUTES = sorted("""ERRORLOG;ENTRIES;MAX
+GROUP;LIST
+LEARN;MINSPEED
+FAN;DIR
+NW;PARAMS;ACTUAL
+SMARTMODE;STATE
+FW;NAME
+LEARN;ZEROTEMP
+WINTERMODE;STATE
+DEVICE;SERVER
+SMARTSLEEP;MINSPEED
+LIGHT;LEVEL;ACTUAL
+LEARN;MAXSPEED
+ERRORLOG;ENTRIES;NUM
+DEVICE;LIGHT
+FW;FW000007
+LIGHT;PWR
+SLEEP;EVENT
+GROUP;ROOM;TYPE
+NW;DHCP
+DEVICE;INDICATORS
+SNSROCC;TIMEOUT;MAX
+NW;AP;STATUS
+FAN;AUTO
+SMARTMODE;ACTUAL
+FAN;SPD;MIN
+NW;TOKEN
+DEVICE;BEEPER
+TIME;VALUE
+LIGHT;LEVEL;MIN
+LIGHT;AUTO
+SMARTSLEEP;IDEALTEMP
+SLEEP;STATE
+FAN;WHOOSH;STATUS
+SNSROCC;STATUS
+SNSROCC;TIMEOUT;CURR
+NAME;VALUE
+NW;SSID
+LIGHT;BOOKENDS
+FAN;TIMER;CURR
+FAN;TIMER;MAX
+FAN;SPD;ACTUAL
+FAN;SPD;MAX
+FAN;PWR
+WINTERMODE;HEIGHT
+SCHEDULE;CAP
+LIGHT;LEVEL;MAX
+SNSROCC;TIMEOUT;MIN
+FAN;BOOKENDS
+FAN;TIMER;MIN
+SLEEP;EVENT;OFF
+SMARTSLEEP;MAXSPEED
+SCHEDULE;EVENT;LIST""".split('\n'))
