@@ -17,6 +17,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 __author__ = 'Tom Faulkner'
+__url__ = 'https://github.com/TomFaulkner/SenseMe/tree/add_more_fan_features'
 
 
 class MWT(object):
@@ -379,7 +380,7 @@ class SenseMe:
             response_dict = self._get_all()
         return response_dict[attribute]
 
-    def get_all_nested(self):
+    def _get_all_nested(self):
         def nest(existing, keys, value):
             key, *keys = keys
             if keys:
@@ -418,6 +419,11 @@ class SenseMe:
     def json(self):
         """ Export all fan details to json """
         return json.dumps(self.get_all_nested())
+    
+    @property
+    def dict(self):
+        """ Export all fan details as dict. """
+        return self._get_all_nested()
 
     @staticmethod
     def _parse_values(line):
