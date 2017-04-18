@@ -12,12 +12,13 @@ import logging
 import re
 import socket
 import time
+import xml.etree.ElementTree as ET
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 __author__ = 'Tom Faulkner'
-__url__ = 'https://github.com/TomFaulkner/SenseMe/tree/add_more_fan_features'
+__url__ = 'https://github.com/TomFaulkner/SenseMe/'
 
 
 class MWT(object):
@@ -57,6 +58,28 @@ class MWT(object):
         func.func_name = f.__name__
 
         return func
+
+
+# https://code.activestate.com/recipes/577882-convert-a-nested-python-data-structure-to-xml/
+def _data_to_xml(d, name='data'):
+    r = ET.Element(name)
+    return ET.tostring(_build_xml(r, d))
+
+
+def _build_xml(r, d):
+    if isinstance(d, dict):
+        for k, v in d.items():
+            s = ET.SubElement(r, k)
+            _build_xml(s, v)
+    elif isinstance(d, tuple) or isinstance(d, list):
+        for v in d:
+            s = ET.SubElement(r, 'i')
+            _build_xml(s, v)
+    elif isinstance(d, str):
+        r.text = d
+    else:
+        r.text = str(d)
+    return r
 
 
 class SenseMe:
@@ -421,9 +444,17 @@ class SenseMe:
         return json.dumps(self._get_all_nested())
 
     @property
+    def xml(self):
+        return _data_to_xml(self._get_all_nested())
+
+    @property
     def dict(self):
         """ Export all fan details as dict. """
         return self._get_all_nested()
+
+    @property
+    def flat_dict(self):
+        return self._get_all()
 
     @staticmethod
     def _parse_values(line):
