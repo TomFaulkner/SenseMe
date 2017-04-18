@@ -445,7 +445,7 @@ class SenseMe:
 
     @property
     def xml(self):
-        return _data_to_xml(self._get_all_nested())
+        return _data_to_xml(self._get_all_nested()).decode()
 
     @property
     def dict(self):
