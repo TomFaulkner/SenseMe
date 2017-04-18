@@ -418,8 +418,8 @@ class SenseMe:
     @property
     def json(self):
         """ Export all fan details to json """
-        return json.dumps(self.get_all_nested())
-    
+        return json.dumps(self._get_all_nested())
+
     @property
     def dict(self):
         """ Export all fan details as dict. """
