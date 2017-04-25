@@ -207,9 +207,9 @@ class SenseMe:
     @light_powered_on.setter
     def light_powered_on(self, power_on=True):
         if power_on:
-            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
-        else:
             self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
+        else:
+            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
 
     def light_toggle(self):
         if self.light_powered_on:
