@@ -3,54 +3,90 @@ Python Library for Haiku SenseMe app controlled fans/lights
 
 This library is useful to control Haiku SenseMe fans with light kits. I would expect it will probably also work with their lights.
 
-It might also be useful for controlling DIY projects as the protocol is very simple and would be easy to clone. And, if you were to use their API the Android and iOS apps may work to control DIY devices. A suggested idea would be to add an Arduino or Raspberry Pi and a relay or two to your own fan and use this or the Haiku Home app to control them.
+It might also be useful for controlling DIY projects as the protocol is very simple and would be easy to clone. And, if you were to use their API the Android and iOS apps may work to control DIY devices. A suggested idea would be to add an Arduino or Raspberry Pi and a relay or two to your own fan and use this or the Haiku Home app to control them. I've read that doing this sort of thing [with a resistor is a dangerous idea, so don't do that.](https://arstechnica.com/civis/viewtopic.php?t=1263401)
 
-Sample usage is found in run.py
+Sample usage is found in [examples](tree/master/examples) and below.
 
 Going forward, I expect to work this in with Flask to put on a VM to control the fan from a webpage on my phone or desktop. 
 
-Sniffing the packets and documenting the protocol were the work of Bruce at http://bruce.pennypacker.org/tag/senseme-plugin/. Much of the code was based on his work on making an Indigo plugin for this fan: https://github.com/bpennypacker/SenseME-Indigo-Plugin
+Sniffing the packets and documenting the protocol were the work of [Bruce](http://bruce.pennypacker.org/tag/senseme-plugin/). Much of the code was based on his work on making [an Indigo plugin](https://github.com/bpennypacker/SenseME-Indigo-Plugin)
 
-I'm new to Python, so there are probably poor coding standards in places, I'm sorry for that.
+See [Issues](issues) for known issues or if you want to contribute but don't know where to start.
+
+I am not affiliated with Haiku Home or Big Ass Fans. Their support rep said this project seemed cool in it's infancy, and they even answered a technical question regarding the protocol for me, so hopefully they still approve.
+
+# Future
+Some ideas for future related projects and features:
+
+ 1. Plex plugin (dim the fans when the movie starts and light up when it is paused or ends? Yes, please!) [DCplaya has made some effort toward this.](https://github.com/dcplaya/SenseMe-Web-App)
+
+ 2. Alexa / Google Home plugins
+
+ 3. Store information in a database (sqlite would be fine) rather than discovering each time.
+
+ 4. Track usage and temperatures
+
+ 5. Other automation system plugins
+
+ 6. Real attempt at a Flask app with embeddable page for a dashboard system.
+
+ 7. Use protocol to control other devices by attaching an Arduino or Pi
+
+ 8. Discover the rest of the protocol. (Run strings on the apps and some packet sniffing.)
+
+ 9. More examples
+
 
 ## Usage
-Please note that the usage and run.py are not up to date with the recent update. Doc strings are not yet present, but will be soon-ish. Functions names should be obvious though, so for now, use dir(SenseMe), or read senseme.py to get methods.
-  
-    from sensemefan import SenseMeFan
+    from senseme import discover
+
+
     def main():
-    # Statically assign the fan? Probably not, but you would do it this way.
-    # fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
-    
-    # Create the fan object and discover the fan
-    fan = SenseMeFan()
+        # discover devices, returns list of SenseMe devices
+        devices = discover()
+        fan = devices[0]
 
-    # Turn the light off
-    # fan.lightoff()
-    
-    # Get the light level
-    # light = fan.getlight()
-    # print(light)
+        # Statically assign the fan? Probably not, but you would do it this way:
+        # from senseme import SenseMe
+        # fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
+        # fan = SenseMe(name="Living Room Fan")
 
-    # Get the fan speed
-    # motor = fan.getfan()
-    # print(motor)
+        # Turn the light off / on
+        # fan.light_powered_on = False
+        # fan.light_powered_on = True
+        # light_status = fan.light_toggle()
 
-    # Toggle light on/off
-    # fan.lighttoggle()
+        # Increase light level by 2 levels
+        # fan.inc_brightness(2)
 
-    # want an increasing light effect? Do this.
-    # But, really, probably don't, I don't think they intended strobe effects.
-    # I'm not responsible if you make a strobe light and break the fan or worse
-    # for intensity in range(1,16):
-    #   fan.setlight(intensity)
-    #   time.sleep(1)
+        # Get Light level
+        # print(fan.brightness)
 
-    # increase the light level by 2 levels
-    # fan.inclight(2)
+        # Fan Speeds
+        # fan.fan_powered_on = True
+        # fan.fan_powered_on = False
+        # print(fan.speed)
+        # fan.speed = 5
 
-    # listen for broadcasts, useful for debugging, wouldn't suggest using it for anything else
-    # fan.listen()
+        # whoosh mode
+        # fan.whoosh = True
 
-    return
+        # want an increasing light effect? Do this.
+        # But, really, probably don't, I don't think Haiku intended strobe effects.
+        # I'm not responsible if you make a strobe light and break the fan or worse
+        # for intensity in range(1,16):
+        #   fan.brightness = intensity
+        #   time.sleep(1)
+
+        # export details to json / xml / str(dict)
+        # fan.json
+        # fan.xml
+        # fan.dict  # nested dict
+        # fan.flat_dict  # flattened
+
+        # Listen for broadcasts, useful for debugging,
+        # wouldn't suggest using it for anything else
+        # fan.listen()
+
 
     main()

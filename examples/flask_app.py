@@ -1,10 +1,9 @@
 import flask
 
-from senseme.senseme import SenseMe
+from senseme import discover
 
-# Statically assign the fan? Probably not, but you would do it this way:
-# fan = SenseMeFan('192.168.1.112', 'Living Room Fan')
-fan = SenseMe()
+
+fan = discover()[0]
 
 app = flask.Flask(__name__)
 app.secret_key = '12839-hidf;safng1jjdsgaklgxzcvzxdsfa125asklvnke1pht32532r'
@@ -13,7 +12,7 @@ app.secret_key = '12839-hidf;safng1jjdsgaklgxzcvzxdsfa125asklvnke1pht32532r'
 @app.route("/")
 def index():
     # return flask.send_from_directory('./static/', 'index.html')
-    flask.flash(fan.fan_speed)
+    flask.flash(str((fan.speed, fan.brightness)))
     return flask.render_template('index.html')
 
 
@@ -21,42 +20,42 @@ def index():
 # Light Functions
 ################################################################################
 @app.route("/light/toggle")
-def togglelight():
+def toggle_light():
     fan.light_toggle()
     flask.flash('Toggling Light')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/off")
-def lightoff():
-    fan.light_off()
+def light_off():
+    fan.light_powered_on = False
     flask.flash('Turning Light Off')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/on")
-def lighton():
-    fan.light_on()
+def light_on():
+    fan.light_powered_on = True
     flask.flash('Turning light On')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/<int:level>")
-def llevel(level):
-    fan.set_light(int(level))
+def light_level(level):
+    fan.brightness = int(level)
     flask.flash('Set light level to {}'.format(level))
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/increase")
-def inclight():
+def inc_light():
     fan.inc_brightness()
     flask.flash('Increased Light Level')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/light/decrease")
-def declight():
+def dec_light():
     fan.dec_brightness()
     flask.flash('Decreased Light Level')
     return flask.redirect(flask.url_for('index'))
@@ -66,30 +65,44 @@ def declight():
 # Fan Functions
 ################################################################################
 @app.route("/fan/increase")
-def incspeed():
+def inc_speed():
     fan.inc_speed()
     flask.flash('Increased Fan Speed')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/fan/decrease")
-def decspeed():
+def dec_speed():
     fan.dec_speed()
     flask.flash('Decreased Fan Speed')
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/fan/<int:speed>")
-def setspeed(speed):
-    fan.set_light(int(speed))
+def set_speed(speed):
+    fan.speed = int(speed)
     flask.flash('Set fan speed to {}'.format(speed))
     return flask.redirect(flask.url_for('index'))
 
 
 @app.route("/fan/toggle")
-def fantoggle():
+def fan_toggle():
     fan.fan_toggle()
     flask.flash('Toggling Fan')
+    return flask.redirect(flask.url_for('index'))
+
+
+@app.route("/fan/off")
+def fan_off():
+    fan.fan_powered_on = False
+    flask.flash('Turning Fan Off')
+    return flask.redirect(flask.url_for('index'))
+
+
+@app.route("/fan/on")
+def fan_on():
+    fan.fan_powered_on = True
+    flask.flash('Turning Fan On')
     return flask.redirect(flask.url_for('index'))
 ##################################################################################
 
