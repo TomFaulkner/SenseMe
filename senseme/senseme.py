@@ -6,7 +6,6 @@ https://github.com/bpennypacker/SenseME-Indigo-Plugin
 
 Source can be found at https://github.com/TomFaulkner/SenseMe
 """
-
 import json
 import logging
 import re
@@ -177,12 +176,7 @@ class SenseMe:
             self._send_command('<%s;FAN;PWR;OFF>' % self.name)
 
     def fan_toggle(self):
-        if self.fan_powered_on:
-            self.fan_powered_on = False
-            return False
-        else:
-            self.fan_powered_on = True
-            return True
+        self.fan_powered_on = not self.fan_powered_on
 
     @property
     def whoosh(self):
@@ -201,8 +195,7 @@ class SenseMe:
     def light_powered_on(self):
         if self._query('<%s;LIGHT;PWR;GET>' % self.name) == 'ON':
             return True
-        else:
-            return False
+        return False
 
     @light_powered_on.setter
     def light_powered_on(self, power_on=True):
@@ -212,12 +205,7 @@ class SenseMe:
             self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
 
     def light_toggle(self):
-        if self.light_powered_on:
-            self.light_powered_on = False
-            return False
-        else:
-            self.light_powered_on = True
-            return True
+        self.light_powered_on = not self.light_powered_on
 
     @staticmethod
     def listen():
