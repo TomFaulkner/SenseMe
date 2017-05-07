@@ -13,50 +13,13 @@ import socket
 import time
 import xml.etree.ElementTree as ET
 
+from .lib import MWT, PerpetualTimer
+
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 
 __author__ = 'Tom Faulkner'
 __url__ = 'https://github.com/TomFaulkner/SenseMe/'
-
-
-class MWT(object):
-    """Memoize With Timeout"""
-    # https://code.activestate.com/recipes/325905-memoize-decorator-with-timeout/
-    _caches = {}
-    _timeouts = {}
-
-    def __init__(self,timeout=2):
-        self.timeout = timeout
-
-    def collect(self):
-        """Clear cache of results which have timed out"""
-        for func in self._caches:
-            cache = {}
-            for key in self._caches[func]:
-                if (time.time() - self._caches[func][key][1]) < self._timeouts[func]:
-                    cache[key] = self._caches[func][key]
-            self._caches[func] = cache
-
-    def __call__(self, f):
-        self.cache = self._caches[f] = {}
-        self._timeouts[f] = self.timeout
-
-        def func(*args, **kwargs):
-            kw = sorted(kwargs.items())
-            key = (args, tuple(kw))
-            try:
-                v = self.cache[key]
-                logging.info('Pulled from cache')
-                if (time.time() - v[1]) > self.timeout:
-                    raise KeyError
-            except KeyError:
-                logging.info('Ran function')
-                v = self.cache[key] = f(*args,**kwargs),time.time()
-            return v[0]
-        func.func_name = f.__name__
-
-        return func
 
 
 # https://code.activestate.com/recipes/577882-convert-a-nested-python-data-structure-to-xml/
@@ -84,7 +47,7 @@ def _build_xml(r, d):
 class SenseMe:
     PORT = 31415
 
-    def __init__(self, ip='', name='', model='', series='', mac=''):
+    def __init__(self, ip='', name='', model='', series='', mac='', **kwargs):
         """
         Suggested use, if not statically defining devices is to call senseme.discover(), 
         which will return a list of SenseMe objects rather than instantiating directly.
@@ -114,6 +77,12 @@ class SenseMe:
             self.details = ''
             self.model = model
             self.series = series
+        self.monitor = kwargs.get('monitor', False)
+        self.monitor_frequency = kwargs.get('monitor_frequency', 30)
+
+        self._pt = None
+        if self.monitor:
+            self.start_monitor()
 
     def __repr__(self):
         return str({'name': self.name, 'ip': self.ip, 'mac': self.mac, 'model': self.model, 'series': self.series,
@@ -182,7 +151,12 @@ class SenseMe:
     def whoosh(self):
         """ This can have a ten second delay since there is no known one item 
          request to retrieve status"""
-        return self.get_attribute('FAN;WHOOSH;STATUS')
+        try:
+            return self.get_attribute('FAN;WHOOSH;STATUS')
+        except KeyError:
+            # this has on at least one occasion failed to return the whoosh status
+            logging.error("FAN;WHOOSH;STATUS wasn't found in dict")
+            raise OSError("Fan failed to return whoosh status")
 
     @whoosh.setter
     def whoosh(self, whoosh_on):
@@ -324,42 +298,35 @@ class SenseMe:
 
     @MWT(timeout=30)
     def _get_all_request(self):
-        return self.send_raw('<%s;GETALL>' % self.name)
+        """ Get all parameters from device, returns as a list"""
+        results = self.send_raw('<%s;GETALL>' % self.name)
+        # sometimes this gets two sections in one string:
+        # join list to str, clean up (), and split back to a list
+        return '||'.join(results).replace('(', '').replace(')', '').split('||')
 
     def _get_all(self):
-        """ Get all parameters from the fan <%s;GETALL>. This, due to Haiku's API doesn't return
+        """ Get all parameters from the fan <%s;GETALL>. This, due to Haiku's API not returning
          all parameters, but it gets most of them.
         
         Method is marked internal, but could be useful for troubleshooting. Suggested way to get to
          this data is to use the get_attribute method. Requesting the desired parameter.
          
-        This data is cache for 30 seconds to avoid the ten seconds it takes to run and to reduce 
+        This data is cached for 30 seconds to avoid the ten seconds it takes to run and to reduce 
          requests sent to the fan.
 
         :return: List of [almost] all fan data.
         """
-        results = self._get_all_request()
-
-        # fix double results
-        extra_rows = []
-        for idx, result in enumerate(results):
-            if ')(' in result:
-                halves = result.split(')(')
-                results[idx] = result.replace(halves[1], ')')
-                extra_rows.append(halves[1])
-        results.extend(extra_rows)
-
         res_dict = {}
+        results = self._get_all_request()
         for result in results:
-            result = result.replace('(', '').replace(')', '')
-            _, result = result.split(';', 1)  # remove device name (Living Room Fan)
+            _, result = result.split(';', 1)  # remove device name i.e Living Room Fan
 
             # handle these manually due to multiple values in result
             if 'BOOKENDS' in result:  # FAN and LIGHT both have BOOKENDS attributes
                 device, low, high = result.rsplit(';', 2)
                 res_dict[device] = (low, high)
             elif 'NW;PARAMS;ACTUAL' in result:
-                # ip, sn, gw = result.rsplit(';', 2)
+                # ip, subnet, gateway
                 res_dict['NW;PARAMS;ACTUAL'] = (result.rsplit(';', 3))[1:]
             else:
                 category, value = result.rsplit(';', 1)
@@ -449,6 +416,34 @@ class SenseMe:
         if len(line.rsplit(';', 1)) > 1:
             k, v = line.rsplit(';', 1)
             return k, v
+
+    def start_monitor(self):
+        """ 
+        Start a monitor that gets all attributes from the fan every monitor_frequency seconds
+        
+        This is experimental. This suffers from the _get_all taking 10 to run and the cache saving for 
+         30 seconds.
+         
+        If this turns out to be a good idea, functions that rely on _get_all should see if monitor is
+         running and pull from a secondary result cache instead of hitting it themselves, as the race condition
+         leads to two queries going to the fan.
+         
+        The monitor also suffers from an issue that stop_monitor most likely will not work to stop the 
+         Timer. I believe this is due to the timer actually having an interval of twenty seconds.
+         That is: 30 second interval at start of timer call, then a ten second run which leaves 20
+         seconds until the next call runs. The order could be changed, where _get_all is called then restart
+         Timer, but then if _get_all causes an unhandled exception the timer dies with it.
+         
+        Possible solution is to have the PT call a function that spawns another thread that does the actual
+         _get_all. This way the PT will never be blocking.
+        """
+        # TODO: See above
+        if not self._pt:
+            self._pt = PerpetualTimer(self.monitor_frequency, self._get_all).start()
+
+    def stop_monitor(self):
+        if self._pt:
+            self._pt.cancel()
 
 
 def discover(devices_to_find=None, time_to_wait=None):
