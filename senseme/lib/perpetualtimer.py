@@ -25,34 +25,44 @@ the blocking function is done.
 
 One potential solution is to have handler_function be a function that spawns a
 thread.
-
 """
 
 import time
 from threading import Timer
 
-
 class PerpetualTimer:
-    def __init__(self, seconds=30, handler_function=None):
-        self.time = seconds
-        self.h_func = handler_function
-        self.thread = Timer(self.time, self.handle_function)
-        self.cancelled = False
+    """A Timer class that does not stop, unless you want it to."""
 
-    def handle_function(self):
-        if not self.cancelled:
-            self.h_func()
-            self.thread = Timer(self.time, self.handle_function)
+    def __init__(self, seconds, target):
+        self._should_continue = False
+        self.is_running = False
+        self.seconds = seconds
+        self.target = target
+        self.thread = None
+
+    def _handle_target(self):
+        self.is_running = True
+        self.target()
+        self.is_running = False
+        print('handled target')
+        self._start_timer()
+
+    def _start_timer(self):
+        # Code could have been running when cancel was called.
+        if self._should_continue:
+            self.thread = Timer(self.seconds, self._handle_target)
             self.thread.start()
 
     def start(self):
-        self.cancelled = False
-        self.thread.start()
+        if not self._should_continue and not self.is_running:
+            self._should_continue = True
+            self._start_timer()
 
     def cancel(self):
-        # TODO: this won't cancel a timer if it is currently executing the h_function
-        self.thread.cancel()
-
+        if self.thread is not None:
+            # Just in case thread is running and cancel fails.
+            self._should_continue = False
+            self.thread.cancel()
 
 if __name__ == '__main__':
     # Example usage:

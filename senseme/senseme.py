@@ -12,7 +12,7 @@ import re
 import socket
 import time
 
-from .lib import MWT, PerpetualTimer
+from .lib import MWT, BackgroundLoop
 from .lib.xml import data_to_xml
 
 LOGGER = logging.getLogger(__name__)
@@ -67,8 +67,11 @@ class SenseMe:
             self.series = series
         self.monitor = kwargs.get('monitor', False)
         self.monitor_frequency = kwargs.get('monitor_frequency', 45)
+        self._monitoring = False
+        self._all_cache = None
 
-        self._pt = None
+        self._background_monitor = BackgroundLoop(self.monitor_frequency,
+                                                  self._get_all_bare)
         if self.monitor:
             self.start_monitor()
 
@@ -345,6 +348,13 @@ class SenseMe:
 
         :return: List of [almost] all fan data.
         """
+        # if monitor running, send cache, if not do request
+        if self._monitoring and self._all_cache:
+            return self._all_cache
+        else:
+            return self._get_all_bare()
+
+    def _get_all_bare(self):
         res_dict = {}
         results = self._get_all_request()
         for result in results:
@@ -362,6 +372,7 @@ class SenseMe:
             else:
                 category, value = result.rsplit(';', 1)
                 res_dict[category] = value
+        self._all_cache = res_dict
         return res_dict
 
     def get_attribute(self, attribute):
@@ -480,15 +491,14 @@ class SenseMe:
         blocking.
         """
         # TODO: See above
-        if not self._pt:
-            self._pt = PerpetualTimer(
-                    self.monitor_frequency, self._get_all
-                ).start()
+        if not self._monitoring:
+            self._monitoring = True
+            self._background_monitor.start()
 
     def stop_monitor(self):
         """Stop the monitor."""
-        if self._pt:
-            self._pt.cancel()
+        self._monitoring = False
+        self._background_monitor.stop()
 
 
 def discover(devices_to_find=3, time_to_wait=5):
