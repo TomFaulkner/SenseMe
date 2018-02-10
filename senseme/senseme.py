@@ -21,9 +21,6 @@ __author__ = 'Tom Faulkner'
 __url__ = 'https://github.com/TomFaulkner/SenseMe/'
 
 
-# https://code.activestate.com/recipes/577882-convert-a-nested-python-data-structure-to-xml/
-
-
 class SenseMe:
     """SenseMe device class.
 
