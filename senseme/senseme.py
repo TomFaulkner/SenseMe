@@ -66,7 +66,7 @@ class SenseMe:
             self.model = model
             self.series = series
         self.monitor = kwargs.get('monitor', False)
-        self.monitor_frequency = kwargs.get('monitor_frequency', 30)
+        self.monitor_frequency = kwargs.get('monitor_frequency', 45)
 
         self._pt = None
         if self.monitor:
@@ -322,7 +322,7 @@ class SenseMe:
         sock.close()
         return messages
 
-    @MWT(timeout=30)
+    @MWT(timeout=45)
     def _get_all_request(self):
         """Get all parameters from device, returns as a list."""
         results = self.send_raw('<%s;GETALL>' % self.name)
@@ -482,7 +482,8 @@ class SenseMe:
         # TODO: See above
         if not self._pt:
             self._pt = PerpetualTimer(
-                self.monitor_frequency, self._get_all).start()
+                    self.monitor_frequency, self._get_all
+                ).start()
 
     def stop_monitor(self):
         """Stop the monitor."""

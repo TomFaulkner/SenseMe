@@ -37,13 +37,16 @@ class PerpetualTimer:
         self.time = seconds
         self.h_func = handler_function
         self.thread = Timer(self.time, self.handle_function)
+        self.cancelled = False
 
     def handle_function(self):
-        self.h_func()
-        self.thread = Timer(self.time, self.handle_function)
-        self.thread.start()
+        if not self.cancelled:
+            self.h_func()
+            self.thread = Timer(self.time, self.handle_function)
+            self.thread.start()
 
     def start(self):
+        self.cancelled = False
         self.thread.start()
 
     def cancel(self):
@@ -55,7 +58,6 @@ if __name__ == '__main__':
     # Example usage:
     def printer():
         print('ipsem lorem')
-
 
     t = PerpetualTimer(3, printer)
     t.start()
