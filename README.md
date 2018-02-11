@@ -5,9 +5,7 @@ This library is useful to control Haiku SenseMe fans with light kits. I would ex
 
 It might also be useful for controlling DIY projects as the protocol is very simple and would be easy to clone. And, if you were to use their API the Android and iOS apps may work to control DIY devices. A suggested idea would be to add an Arduino or Raspberry Pi and a relay or two to your own fan and use this or the Haiku Home app to control them. I've read that doing this sort of thing [with a resistor is a dangerous idea, so don't do that.](https://arstechnica.com/civis/viewtopic.php?t=1263401)
 
-Sample usage is found in [examples](tree/master/examples) and below.
-
-Going forward, I expect to work this in with Flask to put on a VM to control the fan from a webpage on my phone or desktop. 
+Going forward, I expect to work this in with Flask to put on a VM to control the fan from a webpage on my phone or desktop.
 
 Sniffing the packets and documenting the protocol were the work of [Bruce](http://bruce.pennypacker.org/tag/senseme-plugin/). Much of the code was based on his work on making [an Indigo plugin](https://github.com/bpennypacker/SenseME-Indigo-Plugin)
 
@@ -39,54 +37,55 @@ Some ideas for future related projects and features:
 
 ## Usage
     from senseme import discover
+    # discover devices, returns list of SenseMe devices
+    devices = discover()
+    fan = devices[0]
+    repr(fan)
+
+SenseMe(name='Living Room Fan', ip='192.168.1.50', model='FAN,HAIKU', series='HSERIES', mac='20:F8:5E:E3:AB:00')
 
 
-    def main():
-        # discover devices, returns list of SenseMe devices
-        devices = discover()
-        fan = devices[0]
+    # Statically assign the fan? Probably not, but you would do it this way:
+    from senseme import SenseMe
+    fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
+    # or, this might be easier
+    fan = SenseMe(name="Living Room Fan")
 
-        # Statically assign the fan? Probably not, but you would do it this way:
-        # from senseme import SenseMe
-        # fan = SenseMe('192.168.1.50', 'Living Room Fan', model='FAN')
-        # fan = SenseMe(name="Living Room Fan")
+Control the fan:
 
-        # Turn the light off / on
-        # fan.light_powered_on = False
-        # fan.light_powered_on = True
-        # light_status = fan.light_toggle()
+    # Turn the light off / on
+    fan.light_powered_on = False
+    fan.light_powered_on = True
+    # or, if you just want to toggle it
+    light_status = fan.light_toggle()
 
-        # Increase light level by 2 levels
-        # fan.inc_brightness(2)
+    # Increase light level by 2 levels
+    fan.inc_brightness(2)
 
-        # Get Light level
-        # print(fan.brightness)
+    # Get Light level
+    print(fan.brightness)
 
-        # Fan Speeds
-        # fan.fan_powered_on = True
-        # fan.fan_powered_on = False
-        # print(fan.speed)
-        # fan.speed = 5
+    # Fan Speeds
+    fan.fan_powered_on = True
+    fan.fan_powered_on = False
+    print(fan.speed)
 
-        # whoosh mode
-        # fan.whoosh = True
+    # whoosh mode
+    fan.whoosh = True
 
-        # want an increasing light effect? Do this.
-        # But, really, probably don't, I don't think Haiku intended strobe effects.
-        # I'm not responsible if you make a strobe light and break the fan or worse
-        # for intensity in range(1,16):
-        #   fan.brightness = intensity
-        #   time.sleep(1)
+    # want an increasing light effect? Do this.
+    # But, really, probably don't, I don't think Haiku intended strobe effects.
+    # I'm not responsible if you make a strobe light and break the fan or worse
+    for intensity in range(1,16):
+        fan.brightness = intensity
+        time.sleep(1)
 
-        # export details to json / xml / str(dict)
-        # fan.json
-        # fan.xml
-        # fan.dict  # nested dict
-        # fan.flat_dict  # flattened
+    # export details to json / xml / str(dict)
+    fan.json
+    fan.xml
+    fan.dict  # nested dict
+    fan.flat_dict  # flattened
 
-        # Listen for broadcasts, useful for debugging,
-        # wouldn't suggest using it for anything else
-        # fan.listen()
-
-
-    main()
+    # Listen for broadcasts, useful for debugging,
+    # wouldn't suggest using it for anything else
+    fan.listen()
