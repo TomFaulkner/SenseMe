@@ -34,6 +34,9 @@ class SenseMe:
     If SenseMe is instantiated without ip or name a discovery will be done and
     the first device to answer the broadcast will be the device represented by
     this object. Any later answers will be ignored.
+
+    After init it is suggested to start_monitoring() to make whoosh and some
+    other queries instant rather than blocking for ten or so seconds.
     """
 
     PORT = 31415
@@ -468,26 +471,7 @@ class SenseMe:
         Starts a monitor that gets all attributes from the fan every
         monitor_frequency seconds.
 
-        This is experimental. This suffers from the _get_all taking 10 to run
-        and the cache saving for 30 seconds.
-
-        If this turns out to be a good idea, functions that rely on _get_all
-        should see if monitor is running and pull from a secondary result cache
-        instead of hitting it themselves, as the race condition leads to two
-        queries going to the fan.
-
-        The monitor also suffers from an issue that stop_monitor most likely
-        will not work to stop the Timer. I believe this is due to the timer
-        actually having an interval of twenty seconds.
-
-        That is: 30 second interval at start of timer call, then a ten second
-        run which leaves 20 seconds until the next call runs. The order could
-        be changed, where _get_all is called then restart Timer, but then if
-        _get_all causes an unhandled exception the timer dies with it.
-
-        Possible solution is to have the PT call a function that spawns another
-        thread that does the actual _get_all. This way the PT will never be
-        blocking.
+        Using this makes all queries, after first monitor iteration, instant.
         """
         # TODO: See above
         if not self._monitoring:
