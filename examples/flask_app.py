@@ -1,3 +1,5 @@
+"""Basic Flask module example.
+"""
 import flask
 
 from senseme import discover
@@ -16,9 +18,7 @@ def index():
     return flask.render_template('index.html')
 
 
-################################################################################
 # Light Functions
-################################################################################
 @app.route("/light/toggle")
 def toggle_light():
     fan.light_toggle()
@@ -61,9 +61,7 @@ def dec_light():
     return flask.redirect(flask.url_for('index'))
 
 
-################################################################################
 # Fan Functions
-################################################################################
 @app.route("/fan/increase")
 def inc_speed():
     fan.inc_speed()
@@ -104,7 +102,6 @@ def fan_on():
     fan.fan_powered_on = True
     flask.flash('Turning Fan On')
     return flask.redirect(flask.url_for('index'))
-##################################################################################
 
 
 if __name__ == '__main__':

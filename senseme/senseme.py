@@ -65,14 +65,13 @@ class SenseMe:
             self.details = ''
             self.model = model
             self.series = series
-        self.monitor = kwargs.get('monitor', False)
         self.monitor_frequency = kwargs.get('monitor_frequency', 45)
         self._monitoring = False
         self._all_cache = None
 
         self._background_monitor = BackgroundLoop(self.monitor_frequency,
                                                   self._get_all_bare)
-        if self.monitor:
+        if kwargs.get('monitor', False):
             self.start_monitor()
 
     def __repr__(self):
