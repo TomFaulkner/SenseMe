@@ -18,21 +18,27 @@ Some ideas for future related projects and features:
 
  1. Plex plugin (dim the fans when the movie starts and light up when it is paused or ends? Yes, please!) [DCplaya has made some effort toward this.](https://github.com/dcplaya/SenseMe-Web-App)
 
- 2. Alexa / Google Home plugins
+ 2. Alexa / Google Home plugins (see REST API below)
 
- 3. Store information in a database (sqlite would be fine) rather than discovering each time.
+ 3. Store information in a database (sqlite, or even json, would be fine) rather than discovering each time.
 
  4. Track usage and temperatures
 
  5. Other automation system plugins
 
- 6. Real attempt at a Flask app with embeddable page for a dashboard system.
+ 6. ~~Real attempt at a Flask app with embeddable page for a dashboard system.~~
+ 
+ 7. REST API backend with a CLI client
+ 
+ 8. React or other web based client for the above API
+ 
+ 9. Docker image for the above
 
- 7. Use protocol to control other devices by attaching an Arduino or Pi
+ 10. Use protocol to control other devices by attaching an Arduino or Pi
 
- 8. Discover the rest of the protocol. (Run strings on the apps and some packet sniffing.)
+ 11. Discover the rest of the protocol. (Run strings on the apps and some packet sniffing.)
 
- 9. More examples
+ 12. More examples
 
 
 ## Usage
