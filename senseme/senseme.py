@@ -95,7 +95,18 @@ class SenseMe:
         Valid values are between 0 and 7.
         0 is off, 7 is max.
         """
-        return int(self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name))
+        # loop and exception handling due to:
+        # https://github.com/TomFaulkner/SenseMe/issues/19
+        attempts = 0
+        while attempts < 2:
+            speed = self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
+            LOGGER.debug(speed)
+            try:
+                return int(speed)
+            except ValueError:
+                attempts += 1
+                continue
+        return 0
 
     @speed.setter
     def speed(self, speed):

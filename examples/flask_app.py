@@ -1,4 +1,17 @@
 """Basic Flask module example.
+
+To use this example do the following:
+
+- install senseme
+- install flask
+- copy the examples/flask_app.py and templates directory somewhere, or clone
+the repo
+- python3 SenseMe/examples/flask_app.py
+- In a browser go to http://localhost:5000
+
+This is intended as an example, it is not feature complete.
+I would gladly take contributions to extend this from an example to a proper
+interface. My preference, however, would probably be a hug interface.
 """
 import flask
 
