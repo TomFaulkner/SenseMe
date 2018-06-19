@@ -115,6 +115,7 @@ class SenseMe:
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
         self._send_command('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
+        self._update_cache('FAN;SPD;ACTUAL', str(speed))
 
     def inc_speed(self, increment=1):
         """Increases fan speed by increment value, default is 1."""
@@ -140,6 +141,7 @@ class SenseMe:
         elif light < 0:
             light = 0
         self._send_command('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
+        self._update_cache('LIGHT;LEVEL;ACTUAL', str(light))
 
     def inc_brightness(self, increment=1):
         """Increases brighness by increment value, default is 1."""
@@ -165,8 +167,10 @@ class SenseMe:
     def fan_powered_on(self, power_on=True):
         if power_on:
             self._send_command('<%s;FAN;PWR;ON>' % self.name)
+            self._update_cache('FAN;PWR', 'ON')
         else:
             self._send_command('<%s;FAN;PWR;OFF>' % self.name)
+            self._update_cache('FAN;PWR', 'OFF')
 
     def fan_toggle(self):
         """Toggle power state of fan."""
@@ -180,7 +184,10 @@ class SenseMe:
         request to retrieve status
         """
         try:
-            return self.get_attribute('FAN;WHOOSH;STATUS')
+            if self.get_attribute('FAN;WHOOSH;STATUS') == 'ON':
+                return True
+            else:
+                return False
         except KeyError:
             LOGGER.error("FAN;WHOOSH;STATUS wasn't found in dict")
             raise OSError("Fan failed to return whoosh status")
@@ -188,9 +195,11 @@ class SenseMe:
     @whoosh.setter
     def whoosh(self, whoosh_on):
         if whoosh_on:
-            self._send_command('<%s;FAN;WHOOSH;ON')
+            self._send_command('<%s;FAN;WHOOSH;ON>' % self.name)
+            self._update_cache('FAN;WHOOSH;STATUS', 'ON')
         else:
-            self._send_command('<%s;FAN;WHOOSH;OFF')
+            self._send_command('<%s;FAN;WHOOSH;OFF>' % self.name)
+            self._update_cache('FAN;WHOOSH;STATUS', 'OFF')
 
     @property
     def light_powered_on(self):
@@ -207,8 +216,10 @@ class SenseMe:
     def light_powered_on(self, power_on=True):
         if power_on:
             self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
+            self._update_cache('LIGHT;PWR', 'ON')
         else:
             self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
+            self._update_cache('LIGHT;PWR', 'OFF')
 
     def light_toggle(self):
         """Toggle power state of light."""
@@ -337,6 +348,45 @@ class SenseMe:
                 LOGGER.info(str(recv))
         sock.close()
         return messages
+
+    def _update_cache(self, attribute, value):
+        """Update an attribute in the cache with a new value.
+
+        Allows the cache to keep up with changes made by _send_command().
+        Looks for attribute changes that affect other attributes and
+        updates them too.
+
+        :param attribute: cache attribute to update
+        :param value: new attribute value
+        """
+        if self._monitoring and self._all_cache:
+            # update cache attribute with new value
+            self._all_cache[attribute] = value
+            # check for attribute changes that affect other attributes
+            # this list is not exhaustive and there may be other attributes
+            # with the propensity to affect it's neighbors
+            if attribute == 'FAN;PWR':
+                # changes to fan power also affects fan speed and whoosh
+                if value == 'OFF':
+                    self._all_cache['FAN;SPD;ACTUAL'] = '0'
+                    self._all_cache['FAN;WHOOSH;STATUS'] = 'OFF'
+            elif attribute == 'FAN;SPD;ACTUAL':
+                # changes to fan speed also affects fan power and whoosh status
+                if int(value) == 0:
+                    self._all_cache['FAN;PWR'] = 'OFF'
+                    self._all_cache['FAN;WHOOSH;STATUS'] = 'OFF'
+                else:
+                    self._all_cache['FAN;PWR'] = 'ON'
+            elif attribute == 'LIGHT;PWR':
+                # changes to light power also affects light brightness
+                if value == 'OFF':
+                    self._all_cache['LIGHT;LEVEL;ACTUAL'] = '0'
+            elif attribute == 'LIGHT;LEVEL;ACTUAL':
+                # changes to light brightness also changes light power
+                if int(value) > 0:
+                    self._all_cache['LIGHT;PWR'] = 'ON'
+                else:
+                    self._all_cache['LIGHT;PWR'] = 'OFF'
 
     @MWT(timeout=45)
     def _get_all_request(self):
