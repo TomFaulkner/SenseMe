@@ -344,7 +344,8 @@ class SenseMe:
         results = self.send_raw('<%s;GETALL>' % self.name)
         # sometimes this gets two sections in one string:
         # join list to str, clean up (), and split back to a list
-        return '||'.join(results).replace('(', '').replace(')', '').split('||')
+        results = '||'.join(results).replace(')(', ')||(')
+        return results.replace('(', '').replace(')', '').split('||')
 
     def _get_all(self):
         """Get all parameters from the fan <%s;GETALL>.
