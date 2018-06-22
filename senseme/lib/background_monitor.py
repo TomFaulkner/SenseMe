@@ -6,7 +6,9 @@ may happen if the daemon dies while writing.
 """
 import time
 import threading
+import logging
 
+LOGGER = logging.getLogger(__name__)
 
 class BackgroundLoop:
     def __init__(self, interval=45, action=None):
@@ -22,7 +24,12 @@ class BackgroundLoop:
 
     def _loop(self):
         while self.should_continue:
-            self.action()
+            try:
+                self.action()
+            except Exception as e:
+                # catch all exceptions to prevent loop from exiting
+                # when not intended
+                LOGGER.error("Background task Exception: %s" % str(e))
             time.sleep(self.interval)
 
     def start(self):
