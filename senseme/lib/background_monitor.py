@@ -26,10 +26,10 @@ class BackgroundLoop:
         while self.should_continue:
             try:
                 self.action()
-            except Exception as e:
+            except Exception:
                 # catch all exceptions to prevent loop from exiting
                 # when not intended
-                LOGGER.error("Background task Exception: %s" % str(e))
+                LOGGER.exception("Background task error")
             time.sleep(self.interval)
 
     def start(self):
