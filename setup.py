@@ -11,7 +11,7 @@ Python 3.6 or above is required.
 """
 
 setup(name='SenseMe',
-      version='0.1.1',
+      version='0.1.2',
       description='HaikuHome SenseMe API for fans and lights',
       author='Tom Faulkner',
       author_email='tomfaulkner@gmail.com',
