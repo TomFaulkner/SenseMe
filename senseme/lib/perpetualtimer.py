@@ -30,6 +30,7 @@ thread.
 import time
 from threading import Timer
 
+
 class PerpetualTimer:
     """A Timer class that does not stop, unless you want it to."""
 
@@ -44,7 +45,7 @@ class PerpetualTimer:
         self.is_running = True
         self.target()
         self.is_running = False
-        print('handled target')
+        print("handled target")
         self._start_timer()
 
     def _start_timer(self):
@@ -64,10 +65,11 @@ class PerpetualTimer:
             self._should_continue = False
             self.thread.cancel()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     # Example usage:
     def printer():
-        print('ipsem lorem')
+        print("ipsem lorem")
 
     t = PerpetualTimer(3, printer)
     t.start()

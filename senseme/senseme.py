@@ -17,8 +17,8 @@ from .lib.xml import data_to_xml
 
 LOGGER = logging.getLogger(__name__)
 
-__author__ = 'Tom Faulkner'
-__url__ = 'https://github.com/TomFaulkner/SenseMe/'
+__author__ = "Tom Faulkner"
+__url__ = "https://github.com/TomFaulkner/SenseMe/"
 
 
 class SenseMe:
@@ -41,7 +41,7 @@ class SenseMe:
 
     PORT = 31415
 
-    def __init__(self, ip='', name='', model='', series='', mac='', **kwargs):
+    def __init__(self, ip="", name="", model="", series="", mac="", **kwargs):
         """Init a SenseMe device.
 
         :param ip: IP address, if known, is not necessary if name is known or
@@ -65,28 +65,33 @@ class SenseMe:
             self.ip = ip
             self.name = name
             self.mac = mac
-            self.details = ''
+            self.details = ""
             self.model = model
             self.series = series
-        self.monitor_frequency = kwargs.get('monitor_frequency', 45)
+        self.monitor_frequency = kwargs.get("monitor_frequency", 45)
         self._monitoring = False
         self._all_cache = None
 
-        self._background_monitor = BackgroundLoop(self.monitor_frequency,
-                                                  self._get_all_bare)
-        if kwargs.get('monitor', False):
+        self._background_monitor = BackgroundLoop(
+            self.monitor_frequency, self._get_all_bare
+        )
+        if kwargs.get("monitor", False):
             self.start_monitor()
 
     def __repr__(self):
         """Repr Method."""
-        return (f"SenseMe(name='{self.name}', ip='{self.ip}', "
-                f"model='{self.model}', series='{self.series}', "
-                f"mac='{self.mac}')")
+        return (
+            f"SenseMe(name='{self.name}', ip='{self.ip}', "
+            f"model='{self.model}', series='{self.series}', "
+            f"mac='{self.mac}')"
+        )
 
     def __str__(self):
         """Str Method."""
-        return (f'SenseMe Device: {self.name}, Series: {self.series}. '
-                f'(Speed: {self.speed}. Brightness: {self.brightness})')
+        return (
+            f"SenseMe Device: {self.name}, Series: {self.series}. "
+            f"(Speed: {self.speed}. Brightness: {self.brightness})"
+        )
 
     @property
     def speed(self):
@@ -99,7 +104,7 @@ class SenseMe:
         # https://github.com/TomFaulkner/SenseMe/issues/19
         attempts = 0
         while attempts < 2:
-            speed = self._query('<%s;FAN;SPD;GET;ACTUAL>' % self.name)
+            speed = self._query("<%s;FAN;SPD;GET;ACTUAL>" % self.name)
             LOGGER.debug(speed)
             try:
                 return int(speed)
@@ -114,8 +119,8 @@ class SenseMe:
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
-        self._send_command('<%s;FAN;SPD;SET;%s>' % (self.name, speed))
-        self._update_cache('FAN;SPD;ACTUAL', str(speed))
+        self._send_command("<%s;FAN;SPD;SET;%s>" % (self.name, speed))
+        self._update_cache("FAN;SPD;ACTUAL", str(speed))
 
     def inc_speed(self, increment=1):
         """Increases fan speed by increment value, default is 1."""
@@ -132,7 +137,7 @@ class SenseMe:
         Valid values are between 0 and 16.
         0 is off, 16 is max.
         """
-        return int(self._query('<%s;LIGHT;LEVEL;GET;ACTUAL>' % self.name))
+        return int(self._query("<%s;LIGHT;LEVEL;GET;ACTUAL>" % self.name))
 
     @brightness.setter
     def brightness(self, light):
@@ -140,8 +145,8 @@ class SenseMe:
             light = 16
         elif light < 0:
             light = 0
-        self._send_command('<%s;LIGHT;LEVEL;SET;%s>' % (self.name, light))
-        self._update_cache('LIGHT;LEVEL;ACTUAL', str(light))
+        self._send_command("<%s;LIGHT;LEVEL;SET;%s>" % (self.name, light))
+        self._update_cache("LIGHT;LEVEL;ACTUAL", str(light))
 
     def inc_brightness(self, increment=1):
         """Increases brighness by increment value, default is 1."""
@@ -158,7 +163,7 @@ class SenseMe:
         Power On = True
         Power Off = False
         """
-        if self._query('<%s;FAN;PWR;GET>' % self.name) == 'ON':
+        if self._query("<%s;FAN;PWR;GET>" % self.name) == "ON":
             return True
         else:
             return False
@@ -166,11 +171,11 @@ class SenseMe:
     @fan_powered_on.setter
     def fan_powered_on(self, power_on=True):
         if power_on:
-            self._send_command('<%s;FAN;PWR;ON>' % self.name)
-            self._update_cache('FAN;PWR', 'ON')
+            self._send_command("<%s;FAN;PWR;ON>" % self.name)
+            self._update_cache("FAN;PWR", "ON")
         else:
-            self._send_command('<%s;FAN;PWR;OFF>' % self.name)
-            self._update_cache('FAN;PWR', 'OFF')
+            self._send_command("<%s;FAN;PWR;OFF>" % self.name)
+            self._update_cache("FAN;PWR", "OFF")
 
     def fan_toggle(self):
         """Toggle power state of fan."""
@@ -184,7 +189,7 @@ class SenseMe:
         request to retrieve status
         """
         try:
-            if self.get_attribute('FAN;WHOOSH;STATUS') == 'ON':
+            if self.get_attribute("FAN;WHOOSH;STATUS") == "ON":
                 return True
             else:
                 return False
@@ -195,11 +200,11 @@ class SenseMe:
     @whoosh.setter
     def whoosh(self, whoosh_on):
         if whoosh_on:
-            self._send_command('<%s;FAN;WHOOSH;ON>' % self.name)
-            self._update_cache('FAN;WHOOSH;STATUS', 'ON')
+            self._send_command("<%s;FAN;WHOOSH;ON>" % self.name)
+            self._update_cache("FAN;WHOOSH;STATUS", "ON")
         else:
-            self._send_command('<%s;FAN;WHOOSH;OFF>' % self.name)
-            self._update_cache('FAN;WHOOSH;STATUS', 'OFF')
+            self._send_command("<%s;FAN;WHOOSH;OFF>" % self.name)
+            self._update_cache("FAN;WHOOSH;STATUS", "OFF")
 
     @property
     def light_powered_on(self):
@@ -208,18 +213,18 @@ class SenseMe:
         Power On = True
         Power Off = False
         """
-        if self._query('<%s;LIGHT;PWR;GET>' % self.name) == 'ON':
+        if self._query("<%s;LIGHT;PWR;GET>" % self.name) == "ON":
             return True
         return False
 
     @light_powered_on.setter
     def light_powered_on(self, power_on=True):
         if power_on:
-            self._send_command('<%s;LIGHT;PWR;ON>' % self.name)
-            self._update_cache('LIGHT;PWR', 'ON')
+            self._send_command("<%s;LIGHT;PWR;ON>" % self.name)
+            self._update_cache("LIGHT;PWR", "ON")
         else:
-            self._send_command('<%s;LIGHT;PWR;OFF>' % self.name)
-            self._update_cache('LIGHT;PWR', 'OFF')
+            self._send_command("<%s;LIGHT;PWR;OFF>" % self.name)
+            self._update_cache("LIGHT;PWR", "OFF")
 
     def light_toggle(self):
         """Toggle power state of light."""
@@ -232,7 +237,7 @@ class SenseMe:
         Listens for cycles iterations
         """
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(('', 31415))
+        sock.bind(("", 31415))
         for x in range(1, cycles):
             m = sock.recvfrom(1024)
             LOGGER.info(m)
@@ -247,21 +252,22 @@ class SenseMe:
         device in the home this will work well. Otherwise, use the discover
         function of the module rather than this one.
         """
-        data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
+        data = "<ALL;DEVICE;ID;GET>".encode("utf-8")
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(('', 0))
+        s.bind(("", 0))
         s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
         LOGGER.debug("Sending broadcast.")
-        s.sendto(data, ('<broadcast>', self.PORT))
+        s.sendto(data, ("<broadcast>", self.PORT))
 
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         LOGGER.debug("Listening...")
         try:
-            s.bind(('', self.PORT))
+            s.bind(("", self.PORT))
         except OSError as e:
             # Address already in use
-            LOGGER.exception("Port is in use or could not be opened."
-                             "Is another instance running?")
+            LOGGER.exception(
+                "Port is in use or could not be opened." "Is another instance running?"
+            )
             raise OSError
         else:
             try:
@@ -270,9 +276,8 @@ class SenseMe:
                 if not m:
                     LOGGER.error("Didn't receive response.")
                 else:
-                    self.details = m[0].decode('utf-8')
-                    res = re.match(
-                        '\((.*);DEVICE;ID;(.*);(.*),(.*)\)', self.details)
+                    self.details = m[0].decode("utf-8")
+                    res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", self.details)
                     # TODO: Parse this properly rather than regex
                     self.name = res.group(1)
                     self.mac = res.group(2)
@@ -289,7 +294,7 @@ class SenseMe:
         sock.settimeout(5)
 
         sock.connect((self.ip, self.PORT))
-        sock.send(msg.encode('utf-8'))
+        sock.send(msg.encode("utf-8"))
         sock.close()
 
     def _query(self, msg):
@@ -297,18 +302,18 @@ class SenseMe:
         sock.settimeout(5)
 
         sock.connect((self.ip, self.PORT))
-        sock.send(msg.encode('utf-8'))
+        sock.send(msg.encode("utf-8"))
 
         try:
-            status = sock.recv(1048).decode('utf-8')
-            LOGGER.info('Status: ' + status)
+            status = sock.recv(1048).decode("utf-8")
+            LOGGER.info("Status: " + status)
         except socket.timeout:
-            LOGGER.error('Socket Timed Out')
+            LOGGER.error("Socket Timed Out")
         else:
             # TODO: this function shouldn't return data OR False, handle this better
             sock.close()
             LOGGER.info(str(status))
-            match_obj = re.match('\(.*;([^;]+)\)', status)
+            match_obj = re.match("\(.*;([^;]+)\)", status)
             if match_obj:
                 return match_obj.group(1)
             else:
@@ -328,17 +333,17 @@ class SenseMe:
         sock.settimeout(5)
 
         sock.connect((self.ip, self.PORT))
-        sock.send(msg.encode('utf-8'))
+        sock.send(msg.encode("utf-8"))
 
         messages = []
         timeout_occurred = False
         while True:
             try:
-                recv = sock.recv(1048).decode('utf-8')
-                LOGGER.info('Status: ' + recv)
+                recv = sock.recv(1048).decode("utf-8")
+                LOGGER.info("Status: " + recv)
                 messages.append(recv)
             except socket.timeout:
-                LOGGER.info('Socket Timed Out')
+                LOGGER.info("Socket Timed Out")
                 # most likely this means no more data, give it one more iter
                 if timeout_occurred:
                     break
@@ -365,37 +370,37 @@ class SenseMe:
             # check for attribute changes that affect other attributes
             # this list is not exhaustive and there may be other attributes
             # with the propensity to affect it's neighbors
-            if attribute == 'FAN;PWR':
+            if attribute == "FAN;PWR":
                 # changes to fan power also affects fan speed and whoosh
-                if value == 'OFF':
-                    self._all_cache['FAN;SPD;ACTUAL'] = '0'
-                    self._all_cache['FAN;WHOOSH;STATUS'] = 'OFF'
-            elif attribute == 'FAN;SPD;ACTUAL':
+                if value == "OFF":
+                    self._all_cache["FAN;SPD;ACTUAL"] = "0"
+                    self._all_cache["FAN;WHOOSH;STATUS"] = "OFF"
+            elif attribute == "FAN;SPD;ACTUAL":
                 # changes to fan speed also affects fan power and whoosh status
                 if int(value) == 0:
-                    self._all_cache['FAN;PWR'] = 'OFF'
-                    self._all_cache['FAN;WHOOSH;STATUS'] = 'OFF'
+                    self._all_cache["FAN;PWR"] = "OFF"
+                    self._all_cache["FAN;WHOOSH;STATUS"] = "OFF"
                 else:
-                    self._all_cache['FAN;PWR'] = 'ON'
-            elif attribute == 'LIGHT;PWR':
+                    self._all_cache["FAN;PWR"] = "ON"
+            elif attribute == "LIGHT;PWR":
                 # changes to light power also affects light brightness
-                if value == 'OFF':
-                    self._all_cache['LIGHT;LEVEL;ACTUAL'] = '0'
-            elif attribute == 'LIGHT;LEVEL;ACTUAL':
+                if value == "OFF":
+                    self._all_cache["LIGHT;LEVEL;ACTUAL"] = "0"
+            elif attribute == "LIGHT;LEVEL;ACTUAL":
                 # changes to light brightness also changes light power
                 if int(value) > 0:
-                    self._all_cache['LIGHT;PWR'] = 'ON'
+                    self._all_cache["LIGHT;PWR"] = "ON"
                 else:
-                    self._all_cache['LIGHT;PWR'] = 'OFF'
+                    self._all_cache["LIGHT;PWR"] = "OFF"
 
     @MWT(timeout=45)
     def _get_all_request(self):
         """Get all parameters from device, returns as a list."""
-        results = self.send_raw('<%s;GETALL>' % self.name)
+        results = self.send_raw("<%s;GETALL>" % self.name)
         # sometimes this gets two sections in one string:
         # join list to str, clean up (), and split back to a list
-        results = '||'.join(results).replace(')(', ')||(')
-        return results.replace('(', '').replace(')', '').split('||')
+        results = "||".join(results).replace(")(", ")||(")
+        return results.replace("(", "").replace(")", "").split("||")
 
     def _get_all(self):
         """Get all parameters from the fan <%s;GETALL>.
@@ -423,18 +428,18 @@ class SenseMe:
         results = self._get_all_request()
         for result in results:
             # remove device name i.e Living Room Fan
-            _, result = result.split(';', 1)
+            _, result = result.split(";", 1)
 
             # handle these manually due to multiple values in result
             # FAN and LIGHT both have BOOKENDS attributes
-            if 'BOOKENDS' in result:
-                device, low, high = result.rsplit(';', 2)
+            if "BOOKENDS" in result:
+                device, low, high = result.rsplit(";", 2)
                 res_dict[device] = (low, high)
-            elif 'NW;PARAMS;ACTUAL' in result:
+            elif "NW;PARAMS;ACTUAL" in result:
                 # ip, subnet, gateway
-                res_dict['NW;PARAMS;ACTUAL'] = (result.rsplit(';', 3))[1:]
+                res_dict["NW;PARAMS;ACTUAL"] = (result.rsplit(";", 3))[1:]
             else:
-                category, value = result.rsplit(';', 1)
+                category, value = result.rsplit(";", 1)
                 res_dict[category] = value
         self._all_cache = res_dict
         return res_dict
@@ -459,8 +464,8 @@ class SenseMe:
         :param attribute: The attribute you seek
         :return: The value you find
         """
-        if attribute == 'SNSROCC;STATUS':  # doesn't get retrieeved in get_all
-            return self._query('<%s;SNSROCC;STATUS;GET>' % self.name)
+        if attribute == "SNSROCC;STATUS":  # doesn't get retrieeved in get_all
+            return self._query("<%s;SNSROCC;STATUS;GET>" % self.name)
         else:
             response_dict = self._get_all()
         return response_dict[attribute]
@@ -479,23 +484,22 @@ class SenseMe:
         # fix double results
         extra_rows = []
         for result in results:
-            if ')(' in result:
-                halves = result.split(')(')
+            if ")(" in result:
+                halves = result.split(")(")
                 # result = result.replace(halves[1], ')')
                 extra_rows.append(halves[1])
         results.extend(extra_rows)
-        cleaned = [x.replace('(', '').replace(')', '') for x in results]
+        cleaned = [x.replace("(", "").replace(")", "") for x in results]
 
         for idx, result in enumerate(cleaned):
-            if 'BOOKENDS' in result:
-                device, low, high = result.rsplit(';', 2)
-                cleaned[idx] = '{};{},{}'.format(device, low, high)
-            elif 'NW;PARAMS;ACTUAL' in result:
-                nw_params_actual, ip, sn, gw = result.rsplit(';', 3)
-                cleaned[idx] = '{};{},{},{}'.format(
-                    nw_params_actual, ip, sn, gw)
+            if "BOOKENDS" in result:
+                device, low, high = result.rsplit(";", 2)
+                cleaned[idx] = "{};{},{}".format(device, low, high)
+            elif "NW;PARAMS;ACTUAL" in result:
+                nw_params_actual, ip, sn, gw = result.rsplit(";", 3)
+                cleaned[idx] = "{};{},{},{}".format(nw_params_actual, ip, sn, gw)
 
-        data = [x.split(';')[1:] for x in cleaned]
+        data = [x.split(";")[1:] for x in cleaned]
         d = {}
         for *keys, value in data:
             nest(d, keys, value)
@@ -523,8 +527,8 @@ class SenseMe:
 
     @staticmethod
     def _parse_values(line):
-        if len(line.rsplit(';', 1)) > 1:
-            k, v = line.rsplit(';', 1)
+        if len(line.rsplit(";", 1)) > 1:
+            k, v = line.rsplit(";", 1)
             return k, v
 
     def start_monitor(self):
@@ -553,30 +557,29 @@ def discover(devices_to_find=3, time_to_wait=5):
     """
     port = 31415
 
-    data = '<ALL;DEVICE;ID;GET>'.encode('utf-8')
+    data = "<ALL;DEVICE;ID;GET>".encode("utf-8")
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(('', port))
+    s.bind(("", port))
     s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     LOGGER.debug("Sending broadcast.")
-    s.sendto(data, ('<broadcast>', port))
+    s.sendto(data, ("<broadcast>", port))
     LOGGER.debug("Listening...")
     devices = []
     start_time = time.time()
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        s.bind(('', port))
+        s.bind(("", port))
         s.settimeout(2)
         while True:
             try:
                 message = s.recvfrom(1024)
             except OSError:
                 # timeout occurred
-                message = b''
+                message = b""
             if message:
                 LOGGER.info("Received a message")
-                message_decoded = message[0].decode('utf-8')
-                res = re.match(
-                    '\((.*);DEVICE;ID;(.*);(.*),(.*)\)', message_decoded)
+                message_decoded = message[0].decode("utf-8")
+                res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
                 # TODO: Parse this properly rather than regex
                 name = res.group(1)
                 mac = res.group(2)
@@ -584,12 +587,14 @@ def discover(devices_to_find=3, time_to_wait=5):
                 series = res.group(4)
                 ip = message[1][0]
                 devices.append(
-                    SenseMe(ip=ip, name=name, model=model,
-                            series=series, mac=mac))
+                    SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
+                )
 
             time.sleep(.5)
-            if start_time + time_to_wait < time.time() or \
-               len(devices) >= devices_to_find:
+            if (
+                start_time + time_to_wait < time.time()
+                or len(devices) >= devices_to_find
+            ):
                 LOGGER.debug("time_to_wait exceeded or devices_to_find met")
                 break
         return devices

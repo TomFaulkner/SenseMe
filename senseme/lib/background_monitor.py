@@ -10,6 +10,7 @@ import logging
 
 LOGGER = logging.getLogger(__name__)
 
+
 class BackgroundLoop:
     def __init__(self, interval=45, action=None):
         """
@@ -43,10 +44,11 @@ class BackgroundLoop:
         self.should_continue = False
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+
     def do_the_thing():
         """Test things."""
-        print('hello world')
+        print("hello world")
 
     loop = BackgroundLoop(interval=5, action=do_the_thing)
     loop.start()
