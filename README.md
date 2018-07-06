@@ -24,7 +24,7 @@ Some ideas for future related projects and features:
 
  5. Other automation system plugins
 
- 6. REST API backend with a CLI client
+ 6. REST API backend with a CLI client (a basic direct to fan command line client was added in 0.1.3)
 
  7. React or other web based client for the above API
 
@@ -36,8 +36,12 @@ Some ideas for future related projects and features:
 
  11. More examples
 
+ 12. ~~Command Line Client~~ Basic client added in 0.1.3, see [SenseMe CLI](#cli) below
+ 
+ 13. Unit Tests
 
-## Usage
+
+# Usage
     from senseme import discover
     # discover devices, returns list of SenseMe devices
     devices = discover()
@@ -91,3 +95,21 @@ Control the fan:
     # Listen for broadcasts, useful for debugging,
     # wouldn't suggest using it for anything else
     fan.listen()
+
+# SenseMe CLI <a id="cli"></a>
+In version 0.1.3 a script was added to control HaikuHome SenseMe devices from a command line.
+
+Set the following environment variables:
+
+    SENSEME_DEFAULT_FAN_IP
+    SENSEME_DEFAULT_FAN_NAME
+
+Then run `senseme_cli` with one of the following options.
+
+fan x           - set speed to x (0-7)
+fan [on|off]    - fan on/off
+
+light x         - set light brightness to x
+light [on|off]  - light on/off
+
+whoosh [on|off] - whoosh mode on/off
