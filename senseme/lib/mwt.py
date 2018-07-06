@@ -16,11 +16,12 @@ class MWT(object):
         print(timeit.timeit(lambda: print(do_slow_thing(), number=5))
         # was really slow the first time, instant on the remaining
     """
+
     # https://code.activestate.com/recipes/325905-memoize-decorator-with-timeout/
     _caches = {}
     _timeouts = {}
 
-    def __init__(self,timeout=2):
+    def __init__(self, timeout=2):
         self.timeout = timeout
 
     def collect(self):
@@ -41,13 +42,14 @@ class MWT(object):
             key = (args, tuple(kw))
             try:
                 v = self.cache[key]
-                logging.debug('Pulled from cache')
+                logging.debug("Pulled from cache")
                 if (time.time() - v[1]) > self.timeout:
                     raise KeyError
             except KeyError:
-                logging.debug('Ran function')
+                logging.debug("Ran function")
                 v = self.cache[key] = f(*args, **kwargs), time.time()
             return v[0]
+
         func.func_name = f.__name__
 
         return func

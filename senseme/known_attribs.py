@@ -1,5 +1,6 @@
 """Known attributes for reference purposes only."""
-KNOWN_ATTRIBUTES = sorted("""ERRORLOG;ENTRIES;MAX
+KNOWN_ATTRIBUTES = sorted(
+    """ERRORLOG;ENTRIES;MAX
 GROUP;LIST
 LEARN;MINSPEED
 FAN;DIR
@@ -51,4 +52,7 @@ FAN;BOOKENDS
 FAN;TIMER;MIN
 SLEEP;EVENT;OFF
 SMARTSLEEP;MAXSPEED
-SCHEDULE;EVENT;LIST""".split('\n'))
+SCHEDULE;EVENT;LIST""".split(
+        "\n"
+    )
+)

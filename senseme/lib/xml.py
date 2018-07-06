@@ -3,7 +3,7 @@
 import xml.etree.ElementTree as ET
 
 
-def data_to_xml(d, name='data'):
+def data_to_xml(d, name="data"):
     """Convert data to XML."""
     r = ET.Element(name)
     return ET.tostring(build_xml(r, d))
@@ -17,7 +17,7 @@ def build_xml(r, d):
             build_xml(s, v)
     elif isinstance(d, tuple) or isinstance(d, list):
         for v in d:
-            s = ET.SubElement(r, 'i')
+            s = ET.SubElement(r, "i")
             build_xml(s, v)
     elif isinstance(d, str):
         r.text = d
