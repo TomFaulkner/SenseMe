@@ -1,2 +1,4 @@
 v0.1.0, 2018-03-06 -- Initial release.
 v0.1.1, 2018-03-12 -- Fix neglected lib directory
+v0.1.2, 2018-06-23 -- Fix issues with reading fan variables
+v0.1.3, 2018-07-05 -- Add command line script (senseme_cli), improve setup.py

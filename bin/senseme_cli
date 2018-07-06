@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+"""Haiku Home SenseMe CLI
+
+fan x           - set speed to x (0-7)
+fan [on|off]    - fan on/off
+
+light x         - set light brightness to x
+light [on|off]  - light on/off
+
+whoosh [on|off] - whoosh mode on/off
+"""
+
+import os
+import sys
+
+from senseme import SenseMe
+
+IP = os.environ.get('SENSEME_DEFAULT_FAN_IP')
+NAME = os.environ.get('SENSEME_DEFAULT_FAN_NAME')
+
+VALID_PARAMS = f"on off {' '.join([str(x) for x in range(17)])}".split()
+
+if __name__ == "__main__":
+    device = SenseMe(ip=IP, name=NAME)
+    OPTIONS = "fan light whoosh".split()
+
+    if len(sys.argv) != 3 or sys.argv[1] not in OPTIONS or sys.argv[2] not in VALID_PARAMS:
+        print(f"Invalid parameter. Printing help.\n\n{__doc__}")
+        sys.exit(1)
+    
+    try:
+        # intify 0-16, but leave on|off alone
+        number = int(sys.argv[2])
+        power_toggle = False
+    except ValueError:
+        on_or_off = True if sys.argv[2] == "on" else False
+        power_toggle = True
+
+    option = sys.argv[1]
+    if option == "fan" and power_toggle:
+        device.fan_powered_on = on_or_off
+    elif option == "fan":
+        device.speed = number
+    elif option == "light" and power_toggle:
+        device.light_powered_on = on_or_off
+    elif option == "light":
+        device.brightness = number
+    elif option == "whoosh":
+        device.whoosh = on_or_off
