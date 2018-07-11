@@ -26,10 +26,15 @@ A simple library to automate control and monitoring of network connected
 Python 3.6 or above is required.
 """
 
+with open('README.md') as readme:
+    long_description = readme.read()
+
 setup(
     name="SenseMe",
     version="0.1.4",
     description="HaikuHome SenseMe API for fans and lights",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author="Tom Faulkner",
     author_email="tomfaulkner@gmail.com",
     url="https://github.com/TomFaulkner/SenseMe",
