@@ -113,3 +113,14 @@ light x         - set light brightness to x
 light [on|off]  - light on/off
 
 whoosh [on|off] - whoosh mode on/off
+=======
+    fan x           - set speed to x (0-7)
+    fan on|off      - fan on/off
+    light x         - set light brightness to x
+    light on|off    - light on/off
+    whoosh [on|off] - whoosh mode on/off
+
+# Requirements
+Python 3.6 is required to use this library.
+SenseMe devices communicate on UDP port 31415 using broadcast and unicast traffic. Any firewall will have to allow this through.
+
