@@ -106,14 +106,6 @@ Set the following environment variables:
 
 Then run `senseme_cli` with one of the following options.
 
-fan x           - set speed to x (0-7)
-fan [on|off]    - fan on/off
-
-light x         - set light brightness to x
-light [on|off]  - light on/off
-
-whoosh [on|off] - whoosh mode on/off
-=======
     fan x           - set speed to x (0-7)
     fan on|off      - fan on/off
     light x         - set light brightness to x
