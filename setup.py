@@ -1,6 +1,22 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
+import sys
 
 from setuptools import setup
+
+if sys.version_info < (3, 6):
+    error = """
+    SenseMe supports Python 3.6 and above. Python 2.7 is not supported and will not work.
+
+    Python {py} detected.
+
+    Please install using pip3 on Python3.6 or above. 
+    """.format(py='.'.join([str(v) for v in sys.version_info[:3]]))
+
+    print(error, file=sys.stderr)
+    sys.exit(1)
+
 
 long_description = """HaikuHome SenseMe API for fans and lights.
 
