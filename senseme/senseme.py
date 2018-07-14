@@ -101,17 +101,16 @@ class SenseMe:
         0 is off, 7 is max.
         """
         # loop and exception handling due to:
-        # https://github.com/TomFaulkner/SenseMe/issues/19
-        attempts = 0
-        while attempts < 2:
+        # https://github.com/TomFaulkner/SenseMe/issues/38
+        for _ in range(2):
             speed = self._query("<%s;FAN;SPD;GET;ACTUAL>" % self.name)
             LOGGER.debug(speed)
             try:
                 return int(speed)
             except ValueError:
-                attempts += 1
-                continue
-        return 0
+                if speed == 'OFF':
+                    return 0
+        return 0  # return something rather than cause an exception
 
     @speed.setter
     def speed(self, speed):
@@ -137,7 +136,15 @@ class SenseMe:
         Valid values are between 0 and 16.
         0 is off, 16 is max.
         """
-        return int(self._query("<%s;LIGHT;LEVEL;GET;ACTUAL>" % self.name))
+        # workaround for https://github.com/TomFaulkner/SenseMe/issues/38
+        for _ in range(2):
+            result = self._query("<%s;LIGHT;LEVEL;GET;ACTUAL>" % self.name)
+            try:
+                return int(result)
+            except ValueError:
+                if result == 'OFF':
+                    return 0
+        return 0  # return something rather than cause an exception
 
     @brightness.setter
     def brightness(self, light):
@@ -310,7 +317,7 @@ class SenseMe:
         except socket.timeout:
             LOGGER.error("Socket Timed Out")
         else:
-            # TODO: this function shouldn't return data OR False, handle this better
+            # TODO: this shouldn't return data OR False, handle this better
             sock.close()
             LOGGER.info(str(status))
             match_obj = re.match("\(.*;([^;]+)\)", status)
@@ -539,7 +546,6 @@ class SenseMe:
 
         Using this makes all queries, after first monitor iteration, instant.
         """
-        # TODO: See above
         if not self._monitoring:
             self._monitoring = True
             self._background_monitor.start()
