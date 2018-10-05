@@ -106,3 +106,6 @@ venv.bak/
 
 # editor configs and cache
 .vscode
+
+# ide stuff
+/.idea

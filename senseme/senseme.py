@@ -11,6 +11,7 @@ import logging
 import re
 import socket
 import time
+from typing import Tuple
 
 from .lib import MWT, BackgroundLoop
 from .lib.xml import data_to_xml
@@ -65,7 +66,6 @@ class SenseMe:
             self.ip = ip
             self.name = name
             self.mac = mac
-            self.details = ""
             self.model = model
             self.series = series
         self.monitor_frequency = kwargs.get("monitor_frequency", 45)
@@ -283,14 +283,7 @@ class SenseMe:
                 if not m:
                     LOGGER.error("Didn't receive response.")
                 else:
-                    self.details = m[0].decode("utf-8")
-                    res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", self.details)
-                    # TODO: Parse this properly rather than regex
-                    self.name = res.group(1)
-                    self.mac = res.group(2)
-                    self.model = res.group(3)
-                    self.series = res.group(4)
-                    self.ip = m[1][0]
+                    self.name, self.mac, self.model, self.series, self.ip = decode_discovery(m)
                     LOGGER.info(self.name, self.mac, self.model, self.series)
             except OSError as e:
                 LOGGER.critical("No device was found.\n%s" % e)
@@ -584,14 +577,7 @@ def discover(devices_to_find=3, time_to_wait=5):
                 message = b""
             if message:
                 LOGGER.info("Received a message")
-                message_decoded = message[0].decode("utf-8")
-                res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
-                # TODO: Parse this properly rather than regex
-                name = res.group(1)
-                mac = res.group(2)
-                model = res.group(3)
-                series = res.group(4)
-                ip = message[1][0]
+                name, mac, model, series, ip = decode_discovery(message)
                 devices.append(
                     SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
                 )
@@ -609,3 +595,16 @@ def discover(devices_to_find=3, time_to_wait=5):
         raise OSError("Couldn't get port 31415")
     finally:
         s.close()
+
+
+def decode_discovery(message: Tuple[bytes, Tuple[str, str]]) -> Tuple:
+    """ Takes a message in the return format of socket.recvfrom and returns decoded SenseMe discovery information """
+    message_decoded = message[0].decode("utf-8")
+    res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
+    # TODO: Parse this properly rather than regex
+    name = res.group(1)
+    mac = res.group(2)
+    model = res.group(3)
+    series = res.group(4)
+    ip = message[1][0]
+    return name, mac, model, series, ip
