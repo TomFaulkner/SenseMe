@@ -477,13 +477,6 @@ class SenseMe:
         self._send_command("<%s;SMARTSLEEP;MAXSPEED;SET;%s>" % (self.name, speed))
         self._update_cache("SMARTSLEEP;MAXSPEED", speed)
 
-    """
-    Returns/sets light brightness at wakeup for sleep mode
-
-    Valid values are between 0 and 16.
-    0 is off, 16 is max.
-    """
-
     @property
     def smartsleep_wakeup_brightness(self):
         """Returns light brightness at wakeup for sleep mode"""
@@ -1536,58 +1529,3 @@ def discover(devices_to_find=6, time_to_wait=5):
         """Stop the monitor."""
         self._monitoring = False
         self._background_monitor.stop()
-
-
-def discover(devices_to_find=6, time_to_wait=5):
-    """Discover SenseMe devices.
-
-    :return: List of discovered SenseMe devices.
-    """
-    port = 31415
-
-    data = "<ALL;DEVICE;ID;GET>".encode("utf-8")
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.bind(("", port))
-    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-    LOGGER.debug("Sending broadcast.")
-    s.sendto(data, ("<broadcast>", port))
-    LOGGER.debug("Listening...")
-    devices = []
-    start_time = time.time()
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    try:
-        s.bind(("", port))
-        s.settimeout(2)
-        while True:
-            try:
-                message = s.recvfrom(1024)
-            except OSError:
-                # timeout occurred
-                message = b""
-            if message:
-                LOGGER.info("Received a message")
-                message_decoded = message[0].decode("utf-8")
-                res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
-                # TODO: Parse this properly rather than regex
-                name = res.group(1)
-                mac = res.group(2)
-                model = res.group(3)
-                series = res.group(4)
-                ip = message[1][0]
-                devices.append(
-                    SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
-                )
-
-            time.sleep(0.5)
-            if (
-                start_time + time_to_wait < time.time()
-                or len(devices) >= devices_to_find
-            ):
-                LOGGER.debug("time_to_wait exceeded or devices_to_find met")
-                break
-        return devices
-    except OSError:
-        # couldn't get port
-        raise OSError("Couldn't get port 31415")
-    finally:
-        s.close()
