@@ -81,9 +81,9 @@ class SenseMe:
 
     def __repr__(self):
         """Repr Method."""
-        return ( 
-            f"SenseMe(name='{self.name}', ip='{self.ip}', " 
-            f"model='{self.model}', series='{self.series}', " 
+        return (
+            f"SenseMe(name='{self.name}', ip='{self.ip}', "
+            f"model='{self.model}', series='{self.series}', "
             f"mac='{self.mac}')"
         )
 
@@ -93,129 +93,103 @@ class SenseMe:
             f"SenseMe Device: {self.name}, Series: {self.series}. "
             f"(Speed: {self.speed}. Brightness: {self.brightness})"
         )
-    """ 
-    The following properties are generic to haiku devices 
-    """
+
+    # The following properties are generic to haiku devices
+
     @property
-    def beepersound(self):
-        """ Returns/sets the fan's beeper sound setting.
+    def beeper_sound(self):
+        """Returns if the audible beeper sound is ON or OFF"""
+        return self._query("<%s;DEVICE;BEEPER;GET>" % self.name)
 
-        valid values are OF and ON
+    @beeper_sound.setter
+    def beeper_sound(self, mode):
         """
-        mode = self._query("<%s;DEVICE;BEEPER;GET>" % self.name)
-        LOGGER.debug(mode)
+        Sets the audible beeper sound to ON or OFF
 
-        return mode.lower()
-    @beepersound.setter
-    def beepersound(self, mode):
-
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
+        :param mode: valid values are ON and OFF
+        """
+        mode = mode.upper()
+        if mode != "OFF" and mode != "ON":
+            LOGGER.debug("%s is an invalid beeper sound setting.  Use ON or OFF" % mode)
         else:
-            print("%s is an invalid smartmode" % mode)
-            return 1
-        print("<%s;DEVICE;BEEPER;%s>" % (self.name, mode))
-        self._send_command("<%s;DEVICE;BEEPER;%s>" % (self.name, mode))
-        self._update_cache("DEVICE;BEEPER", mode)
-        return 0  # return something rather than cause an exception
+            self._send_command("<%s;DEVICE;BEEPER;%s>" % (self.name, mode))
+            self._update_cache("DEVICE;BEEPER", mode)
 
     @property
-    def devicetime(self):
-        """
-        Return the current time on the device
-        """
-        return(self._query("<%s;TIME;VALUE;GET>" % self.name))
+    def device_time(self):
+        """Return the current time on the device"""
+        return self._query("<%s;TIME;VALUE;GET>" % self.name)
 
     @property
-    def firmwarename(self):
-        """
-        Return the name of the firmware running on the fan
-        """
-        return(self._query("<%s;FW;NAME;GET>" % self.name))
+    def firmware_name(self):
+        """Return the name of the firmware file running on the SenseMe device"""
+        return self._query("<%s;FW;NAME;GET>" % self.name)
 
     @property
-    def firmwareversion(self):
-        """
-        Return the name of the firmware running on the fan
-        """
-        fwname = self.firmwarename
-        return(self._query("<%s;FW;%s;GET>" % (self.name, fwname)))
+    def firmware_version(self):
+        """Return the name of the firmware running on the fan"""
+        name = self.firmware_name
+        return self._query("<%s;FW;%s;GET>" % (self.name, name))
 
     @property
     def led_indicators(self):
-        """ Returns/sets fan's indicator leds 
+        """Returns if the fan's indicator LED is ON or OFF"""
+        return self._query("<%s;DEVICE;INDICATORS;GET>" % self.name)
 
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;DEVICE;INDICATORS;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @led_indicators.setter
     def led_indicators(self, mode):
+        """
+        Sets the fan's indicator LED to ON or OFF
 
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
+        :param mode: valid values are ON and OFF
+        """
+        mode = mode.upper()
+        if mode != "OFF" and mode != "ON":
+            LOGGER.debug("%s is an led indicator setting.  Use ON or OFF" % mode)
         else:
-            print("%s is an invalid smartmode" % mode)
-            return 1
-        self._send_command("<%s;DEVICE;INDICATORS;%s>" % (self.name, mode))
-        self._update_cache("DEVICE;INDICATORS", mode)
-        return 0  # return something rather than cause an exception
+            self._send_command("<%s;DEVICE;INDICATORS;%s>" % (self.name, mode))
+            self._update_cache("DEVICE;INDICATORS", mode)
 
     @property
-    def network_apstatus(self):
-        """
-        Returns if the wireless access point is enabled on the device
-        """
-        return(self._query("<%s;NW;AP;GET;STATUS>" % self.name))
+    def network_ap_status(self):
+        """Returns if the wireless access point is enabled on the device"""
+        return self._query("<%s;NW;AP;GET;STATUS>" % self.name)
 
     @property
-    def network_dhcpstate(self):
-        """
-        Returns if the device is running a local dhcp service
-        """
-        return(self._query("<%s;NW;DHCP;GET>" % self.name))
+    def network_dhcp_state(self):
+        """Returns if the device is running a local dhcp service"""
+        return self._query("<%s;NW;DHCP;GET>" % self.name)
 
     @property
     def network_parameters(self):
         """
         Return a string of all network settings for the device
+
+        The string is of the form IP Address;Subnet Mask;Default Gateway
         """
         raw = self._queryraw("<%s;NW;PARAMS;GET;ACTUAL>" % self.name)
 
-        #grab all between the parens
-        raw = raw[raw.find("(")+1:raw.find(")")]
+        # grab all between the parens
+        raw = raw[raw.find("(") + 1 : raw.find(")")]
 
-        vals = raw.split(';')
-        return (vals[4],vals[5],vals[6])
+        vals = raw.split(";")
+        return vals[4], vals[5], vals[6]
 
     @property
     def network_ssid(self):
-        """
-        Return the wireless SSID the device is connected to 
-        """
-        return(self._query("<%s;NW;SSID;GET>" % self.name))
+        """Return the wireless SSID the device is connected to"""
+        return self._query("<%s;NW;SSID;GET>" % self.name)
 
     @property
     def network_token(self):
-        """
-        Return the network token of the device
-        """
-        return(self._query("<%s;NW;TOKEN;GET>" % self.name))
+        """Return the network token of the device"""
+        return self._query("<%s;NW;TOKEN;GET>" % self.name)
 
-
-
-    """
-    The following properties are specific to haiku fans   
-    """
+    # The following properties are specific to haiku fans
     @property
     def fan_powered_on(self):
-        """Return or sets state of fan power.
+        """
+        Returns if the fan is on or off
 
         Power On = True
         Power Off = False
@@ -227,11 +201,16 @@ class SenseMe:
 
     @fan_powered_on.setter
     def fan_powered_on(self, power_on=True):
+        """
+        Sets the fan to be on or off
+
+        :param power_on: True=On, False=Off
+        """
         if power_on:
             self._send_command("<%s;FAN;PWR;ON>" % self.name)
             self._update_cache("FAN;PWR", "ON")
         else:
-            self._;SETsend_command("<%s;FAN;PWR;OFF>" % self.name)
+            self._send_command("<%s;FAN;PWR;OFF>" % self.name)
             self._update_cache("FAN;PWR", "OFF")
 
     def fan_toggle(self):
@@ -240,28 +219,23 @@ class SenseMe:
 
     @property
     def height(self):
-        """Returns/sets fan height in centimeters
+        """Returns/sets fan height in centimeters"""
+        return int(self._query("<%s;WINTERMODE;HEIGHT;GET>" % self.name))
 
-        Valid values are greater than 0
-        """
-        val = self._query("<%s;WINTERMODE;HEIGHT;GET>" % self.name)
-        LOGGER.debug(val)
-        return int(val)
     @height.setter
     def height(self, val):
-        if  val > 0:
-            self._send_command("<%s;WINTERMODE;HEIGHT;SET;%s>" % (self.name,
-                                                                  val))
+        """
+        Sets fan height in centimeters
+
+        :param val: The height in centimeters
+        """
+        if val > 0:
+            self._send_command("<%s;WINTERMODE;HEIGHT;SET;%s>" % (self.name, val))
             self._update_cache("WINTERMODE;HEIGHT", str(val))
-        return 0
 
     @property
     def speed(self):
-        """Returns/sets fan speed.
-
-        Valid values are between 0 and 7.
-        0 is off, 7 is max.
-        """
+        """Returns the fan speed."""
         # loop and exception handling due to:
         # https://github.com/TomFaulkner/SenseMe/issues/38
         for _ in range(2):
@@ -270,65 +244,62 @@ class SenseMe:
             try:
                 return int(speed)
             except ValueError:
-                if speed == 'OFF':
+                if speed == "OFF":
                     return 0
         return 0  # return something rather than cause an exception
+
     @speed.setter
     def speed(self, speed):
+        """
+        Sets fan speed.
+
+        :param val: Valid values are between 0 and 7.
+        """
         if speed > 7:  # max speed is 7, fan corrects to 7
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
         self._send_command("<%s;FAN;SPD;SET;%s>" % (self.name, speed))
         self._update_cache("FAN;SPD;ACTUAL", str(speed))
-        return 0
 
     @property
-    def minspeed(self):
-        """ Returns the fan's minimum speed setting.
-
-        valid values are 0-7
-        """
-        speed = self._query("<%s;FAN;SPD;GET;MIN>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed
+    def min_speed(self):
+        """Returns the fan's minimum speed setting."""
+        return self._query("<%s;FAN;SPD;GET;MIN>" % self.name)
 
     @property
-    def maxspeed(self):
-        """ Returns the fan's maximum speed setting.
-
-        valid values are 0-7
-        """
-        speed = self._query("<%s;FAN;SPD;GET;MAX>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed
+    def max_speed(self):
+        """Returns the fan's maximum speed setting."""
+        return self._query("<%s;FAN;SPD;GET;MAX>" % self.name)
 
     @property
-    def roomsettings_fanspeedlimits(self):
-        """
-        returns a tuple of the min and max fan speeds the room supports
-        """
+    def room_settings_fan_speed_limits(self):
+        """Returns a tuple of the min and max fan speeds the room is configured to support"""
         raw = self._queryraw("<%s;FAN;BOOKENDS;GET>" % self.name)
 
-        #grab all between the parens
-        raw = raw[raw.find("(")+1:raw.find(")")]
+        # grab all between the parens
+        raw = raw[raw.find("(") + 1 : raw.find(")")]
 
-        vals = raw.split(';')
-        return (int(vals[3]),int(vals[4]))
-    @roomsettings_fanspeedlimits.setter
-    def roomsettings_fanspeedlimits(self, speeds):
+        vals = raw.split(";")
+        return int(vals[3]), int(vals[4])
+
+    @room_settings_fan_speed_limits.setter
+    def room_settings_fan_speed_limits(self, speeds):
+        """
+        Set a tuple of the min and max fan speeds the room is configured to support
+
+        :params speeds: [min,max]
+        """
         if speeds[0] >= speeds[1]:
-            LOGGER.debug("minspeed cannot exceed maxspeed")
+            LOGGER.debug("min speed cannot exceed max speed")
             return
 
-        self._send_command("<%s;FAN;BOOKENDS;SET;%s;%s>" % (self.name,
-                                                            speeds[0],
-                                                            speeds[1]))
+        self._send_command(
+            "<%s;FAN;BOOKENDS;SET;%s;%s>" % (self.name, speeds[0], speeds[1])
+        )
 
     def dec_speed(self, decrement=1):
-        """Decreases fan speed by decrement value, default is 1."""
+        """ Decreases fan speed by decrement value, default is 1."""
         self.speed -= decrement
 
     def inc_speed(self, increment=1):
@@ -337,351 +308,322 @@ class SenseMe:
 
     @property
     def learnmode(self):
-        """ Returns/sets the fan's wintermode setting.
-
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;LEARN;STATE;GET>" % self.name)
-        LOGGER.debug(mode)
-        if mode.lower() == 'learn':
-            return 'on'
+        """Returns/sets the fan's wintermode setting."""
+        mode = self._query("<%s;LEARN;STATE;GET>" % self.name).upper()
+        if mode == "LEARN":
+            return "ON"
         else:
-            return mode.lower()
+            return mode
+
     @learnmode.setter
     def learnmode(self, mode):
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'LEARN'
-        else:
-            LOGGER("%s is an invalid smartmode" % mode)
-            return 1
+        """
+        Returns/sets the fan's wintermode setting.
 
-        self._send_command("<%s;LEARN;STATE;%s>" % (self.name, mode))
+        :params mode: valid values are OFF and ON
+        """
+        mode = mode.upper()
+        if mode == "ON":
+            mode = "LEARN"
+        elif mode != "OFF":
+            LOGGER.error("%s is an invalid learn mode" % mode)
+
+        self._send_command("<%s;LEARN;STATE;SET;%s>" % (self.name, mode))
         self._update_cache("LEARN;STATE", mode)
-        return 0  # return something rather than cause an exception
-    
+
     @property
     def learnmode_zerotemp(self):
-        """ Returns/sets the temperature in fahrenheit that the fan will \
-       auto shutoff
-
-        valid values are 50-90
-        """
+        """Returns the temperature in fahrenheit that the fan will auto shutoff"""
         temp = self._query("<%s;LEARN;ZEROTEMP;GET>" % self.name)
-        LOGGER.debug(temp)
+        return math.ceil(((int(temp) * 9) / 500) + 32)
 
-        return math.ceil( ((int(temp)*9)/500)+32 )
     @learnmode_zerotemp.setter
     def learnmode_zerotemp(self, temp):
+        """
+        Sets the temperature in fahrenheit that the fan will auto shutoff
+
+        :params temp: valid values are 50-90
+        """
         if temp < 50:
             temp = 50
         elif temp > 90:
             temp = 90
 
-        temp = int( (((int(temp)-32)*500)/9) )
-        self._send_command("<%s;LEARN;ZEROTEMP;SET;%s>" % (self.name,
-                                                                      temp))
+        temp = int((((int(temp) - 32) * 500) / 9))
+        self._send_command("<%s;LEARN;ZEROTEMP;SET;%s>" % (self.name, temp))
         self._update_cache("LEARN;ZEROTEMP", temp)
-        return 0
 
     @property
     def learnmode_minspeed(self):
-        """ Returns the fan's minimum speed setting in learning mode.
+        """Returns the fan's minimum speed setting in learning mode."""
+        return self._query("<%s;LEARN;MINSPEED;GET>" % self.name)
 
-        valid values are 0-7
-        """
-        speed = self._query("<%s;LEARN;MINSPEED;GET>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed
     @learnmode_minspeed.setter
     def learnmode_minspeed(self, speed):
+        """
+        Sets the fan's minimum speed setting in learning mode.
+
+        :param speed: valid values are 0-7
+        """
         if speed > 7:  # max speed is 7, fan corrects to 7
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
 
-        self._send_command("<%s;LEARN;MINSPEED;SET;%s>" % (self.name,
-                                                                      speed))
+        self._send_command("<%s;LEARN;MINSPEED;SET;%s>" % (self.name, speed))
         self._update_cache("LEARN;MINSPEED", speed)
-        return 0
 
     @property
     def learnmode_maxspeed(self):
-        """ Returns the fan's maximum speed setting.
+        """Returns the fan's maximum speed setting."""
+        return self._query("<%s;LEARN;MAXSPEED;GET>" % self.name)
 
-        valid values are 0-7
-        """
-        speed = self._query("<%s;LEARN;MAXSPEED;GET>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed
     @learnmode_maxspeed.setter
     def learnmode_maxspeed(self, speed):
+        """
+        Sets the fan's minimum speed setting in learning mode.
+
+        :param speed: valid values are 0-7
+        """
         if speed > 7:  # max speed is 7, fan corrects to 7
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
 
-        self._send_command("<%s;LEARN;MAXSPEED;SET;%s>" % (self.name, \
-                                                              speed))
+        self._send_command("<%s;LEARN;MAXSPEED;SET;%s>" % (self.name, speed))
         self._update_cache("LEARN;MAXSPEED", speed)
-        return 0
+
     @property
     def smartsleep_mode(self):
-        """ Returns/sets the fan's smart sleep mode setting.
+        """Returns the fan's smart sleep mode setting."""
+        return self._query("<%s;SLEEP;STATE;GET>" % self.name)
 
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;SLEEP;STATE;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @smartsleep_mode.setter
     def smartsleep_mode(self, mode):
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
-        else:
-            LOGGER("%s is an invalid smartmode" % mode)
-            return 1
+        """
+        Sets the fan's smart sleep mode setting.
+
+        :param mode: valid values are ON and OFF
+        """
+        mode = mode.upper()
+        if mode != "ON" and mode != "OFF":
+             LOGGER.error(
+                "%s is an invalid sleep mode. Valid values are ON and OFF" % mode
+            )
+
         self._send_command("<%s;SLEEP;STATE;%s>" % (self.name, mode))
         self._update_cache("SLEEP;STATE", mode)
-        return 0  # return something rather than cause an exception
 
     @property
     def smartsleep_idealtemp(self):
-        """ Returns/sets the fan's smart sleep ideal temp setting.
-
-        valid values are 50-90 degrees fahrenheit
-        """
+        """Returns the fan's smart sleep ideal temp setting."""
         temp = self._query("<%s;SMARTSLEEP;IDEALTEMP;GET>" % self.name)
-        LOGGER.debug(temp)
 
-        return math.ceil( ((int(temp)*9)/500)+32 )
+        return math.ceil(((int(temp) * 9) / 500) + 32)
+
     @smartsleep_idealtemp.setter
     def smartsleep_idealtemp(self, temp):
+        """
+        Sets the fan's smart sleep ideal temp setting.
+
+        :param temp: valid values are 50-90 degrees fahrenheit
+        """
         if temp < 50:
             temp = 50
         elif temp > 90:
             temp = 90
 
-        temp = int( (((int(temp)-32)*500)/9) )
-        self._send_command("<%s;SMARTSLEEP;IDEALTEMP;SET;%s>" % (self.name,
-                                                                      temp))
+        temp = int((((int(temp) - 32) * 500) / 9))
+        self._send_command("<%s;SMARTSLEEP;IDEALTEMP;SET;%s>" % (self.name, temp))
         self._update_cache("SMARTSLEEP;IDEALTEMP", temp)
-        return 0
 
     @property
     def smartsleep_minspeed(self):
-        """ Returns/sets the fan's smartsleep minimum speedsetting.
+        """ Returns the fan's smartsleep minimum speedsetting."""
+        return self._query("<%s;SMARTSLEEP;MINSPEED;GET>" % self.name)
 
-        valid values are 0-7
-        """
-        speed = self._query("<%s;SMARTSLEEP;MINSPEED;GET>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed
     @smartsleep_minspeed.setter
     def smartsleep_minspeed(self, speed):
+        """
+        Returns/sets the fan's smartsleep minimum speedsetting.
+
+        :params speed: valid values are 0-7
+        """
         if speed > 7:  # max speed is 7, fan corrects to 7
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
 
-        self._send_command("<%s;SMARTSLEEP;MINSPEED;SET;%s>" % (self.name,
-                                                                      speed))
+        self._send_command("<%s;SMARTSLEEP;MINSPEED;SET;%s>" % (self.name, speed))
         self._update_cache("SMARTSLEEP;MINSPEED", speed)
-        return 0
 
     @property
     def smartsleep_maxspeed(self):
-        """ Returns/sets the fan's smartsleep minimum speedsetting.
+        """Returns the fan's smart sleep minimum speed setting."""
+        return self._query("<%s;SMARTSLEEP;MAXSPEED;GET>" % self.name)
 
-        valid values are 0-7
-        """
-        speed= self._query("<%s;SMARTSLEEP;MAXSPEED;GET>" % self.name)
-        LOGGER.debug(speed)
-
-        return speed 
     @smartsleep_maxspeed.setter
     def smartsleep_maxspeed(self, speed):
+        """
+        Sets the fan's smart sleep maximum speed setting.
+
+        :param speed: valid values are 0-7
+        """
         if speed > 7:  # max speed is 7, fan corrects to 7
             speed = 7
         elif speed < 0:  # 0 also sets fan to off automatically
             speed = 0
 
-        self._send_command("<%s;SMARTSLEEP;MAXSPEED;SET;%s>" % (self.name,
-                                                                      speed))
+        self._send_command("<%s;SMARTSLEEP;MAXSPEED;SET;%s>" % (self.name, speed))
         self._update_cache("SMARTSLEEP;MAXSPEED", speed)
-        return 0
+
+    """
+    Returns/sets light brightness at wakeup for sleep mode
+
+    Valid values are between 0 and 16.
+    0 is off, 16 is max.
+    """
 
     @property
-    def smartsleep_wakeupbrightness(self):
-        """Returns/sets light brightness at wakeup for sleep mode
-
-        Valid values are between 0 and 16.
-        0 is off, 16 is max.
-        """
+    def smartsleep_wakeup_brightness(self):
+        """Returns light brightness at wakeup for sleep mode"""
         result = self._query("<%s;SLEEP;EVENT;OFF;GET>" % self.name)
-        if(result == 'LIGHT,PWR,OFF') or (result == 'OFF'):
+        if (result == "LIGHT,PWR,OFF") or (result == "OFF"):
             return 0
-        elif('LIGHT,LEVEL,' in result):
-            result = result.replace('LIGHT,LEVEL,','')
-            return int(result)
         else:
-            LOGGER.debug(result)
-            return -1
-    @smartsleep_wakeupbrightness.setter
-    def smartsleep_wakeupbrightness(self, light):
+            return int(result.replace("LIGHT,LEVEL,", ""))
+
+    @smartsleep_wakeup_brightness.setter
+    def smartsleep_wakeup_brightness(self, light):
+        """
+        Sets light brightness at wakeup for sleep mode
+
+        :param light: Valid values are between 0 and 16.
+        """
         if light > 16:
             light = 16
         elif light < 0:
             light = 0
-        self._send_command("<%s;SLEEP;EVENT;OFF;SET;LIGHT,LEVEL,%s>" % (self.name, light))
+        self._send_command(
+            "<%s;SLEEP;EVENT;OFF;SET;LIGHT,LEVEL,%s>" % (self.name, light)
+        )
         self._update_cache("SLEEP;EVENT;OFF;LIGHT,LEVEL,", str(light))
 
     @property
-    def fandirection(self):
-        """ Returns/sets the direction of the fan
+    def fan_direction(self):
+        """Returns the direction of the fan"""
+        return self._query("<%s;FAN;DIR;GET>" % self.name)
 
-        valid values are FWD and REV
+    @fan_direction.setter
+    def fan_direction(self, mode):
         """
-        mode = self._query("<%s;FAN;DIR;GET>" % self.name)
-        LOGGER.debug(mode)
+        Sets the direction of the fan rotation
 
-        return mode.lower()
-    @fandirection.setter
-    def fandirection(self, mode):
+        :params mode: Valid values are FWD and REV
+        """
+        mode = mode.upper()
 
-        if mode.lower() == 'fwd':
-            mode = 'FWD'
-        elif mode.lower() == 'rev':
-            mode = 'REV'
+        if mode != "FWD" and mode != "REV":
+            LOGGER.error(
+                "%s is an invalid direction.  Valid values are FWD and REV" % mode
+            )
         else:
-            LOGGER("%s is an invalid direction" % mode)
-            return 1
-        self._send_command("<%s;FAN;DIR;SET;%s>" % (self.name, mode))
-        self._update_cache("FAN;DIR", mode)
-        return 0  # return something rather than cause an exception
+            self._send_command("<%s;FAN;DIR;SET;%s>" % (self.name, mode))
+            self._update_cache("FAN;DIR", mode)
 
     @property
     def fan_motionmode(self):
-        """ Returns/sets the fan motion sensor
+        """Returns the fan motion sensor mode"""
+        return self._query("<%s;FAN;AUTO;GET>" % self.name)
 
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;FAN;AUTO;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @fan_motionmode.setter
     def fan_motionmode(self, mode):
+        """
+        Sets the fan motion sensor mode
 
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
+        :param mode: valid values are ON and OFF
+        """
+        mode = mode.upper()
+        if mode != "OFF" and mode != "ON":
+            LOGGER.error(
+                "%s is an invalid fan motion mode.  Valid modes are ON and OFF" % mode
+            )
         else:
-            print("%s is an invalid smartmode" % mode)
-            return 1
-        self._send_command("<%s;FAN;AUTO;%s>" % (self.name, mode))
-        self._update_cache("FAN;AUTO", mode)
-        return 0  # return something rather than cause an exception
+            self._send_command("<%s;FAN;AUTO;SET;%s>" % (self.name, mode))
+            self._update_cache("FAN;AUTO", mode)
+
     @property
     def motionmode_mintimer(self):
-        """ Returns the minimum timer setting in minutes for the fan and light
-        auto shutoff on no motion.
-        """
+        """Returns the minimum timer setting in minutes for the fan and light auto shutoff on no motion."""
         timer = self._query("<%s;SNSROCC;TIMEOUT;GET;MIN>" % self.name)
-        LOGGER.debug(timer)
-
-        return int(int(timer)/60000)
+        return int(int(timer) / 60000)
 
     @property
     def motionmode_maxtimer(self):
-        """ Returns the minimum timer setting in minutes for the fan and light
-        auto shutoff on no motion.
-        """
+        """Returns the minimum timer setting in minutes for the fan and light auto shutoff on no motion."""
         timer = self._query("<%s;SNSROCC;TIMEOUT;GET;MAX>" % self.name)
-        LOGGER.debug(timer)
-
-        return int(int(timer)/60000)
+        return int(int(timer) / 60000)
 
     @property
     def motionmode_currenttimer(self):
-        """ Returns the current timer setting in minutes for the fan and light
-        auto shutoff on no motion.
-        """
+        """Returns the current timer setting in minutes for the fan and light auto shutoff on no motion."""
         timer = self._query("<%s;SNSROCC;TIMEOUT;GET;CURR>" % self.name)
-        LOGGER.debug(timer)
+        return int(int(timer) / 60000)
 
-        return int(int(timer)/60000)
+    @motionmode_currenttimer.setter
+    def motionmode_currenttimer(self, timeout):
+        """Sets the timout setting in minutes for the fan and light auto shutoff on no motion."""
+        self._send_command("<%s;SNSROCC;TIMEOUT;SET;%s>" % (self.name, int(int(timeout)*60000)))
+        self._update_cache("SNSROCC;TIMEOUT", timeout)
 
     @property
-    def motionmode_occupiedstatus(self):
-        """ Returns returns if the room is currently occupied or unoccupied
-        based on the motion sensor in the fan.
-        """
-        occupied= self._query("<%s;SNSROCC;STATUS;GET>" % self.name)
-        LOGGER.debug(occupied)
-
-        return occupied.lower()
+    def motionmode_occupied_status(self):
+        """Returns  if the room is currently OCCUPIED or UNOCCUPIED based on the motion sensor in the fan."""
+        return self._query("<%s;SNSROCC;STATUS;GET>" % self.name)
 
     @property
     def wintermode(self):
-        """ Returns/sets the fan's wintermode setting.
+        """Returns the fan's winter mode setting."""
+        return self._query("<%s;WINTERMODE;STATE;GET>" % self.name)
 
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;WINTERMODE;STATE;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @wintermode.setter
     def wintermode(self, mode):
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
-        else:
-            LOGGER("%s is an invalid smartmode" % mode)
-            return 1
+        """
+        Returns/sets the fan's winter mode setting.
 
-        self._send_command("<%s;WINTERMODE;STATE;%s>" % (self.name, mode))
-        self._update_cache("WINTERMODE;STATE", mode)
-        return 0  # return something rather than cause an exception
+        :param mode: valid values are OFF and ON
+        """
+        mode = mode.upper()
+        if mode != "OFF" and mode != "ON":
+            LOGGER.error(
+                "%s is an invalid winter mode. Valid modes are ON and OFF" % mode
+            )
+        else:
+            self._send_command("<%s;WINTERMODE;STATE;%s>" % (self.name, mode))
+            self._update_cache("WINTERMODE;STATE", mode)
 
     @property
     def smartmode(self):
-        """ Returns/sets the fan's smartmode setting.
+        """Returns the fan's smart mode setting."""
+        return self._query("<%s;SMARTMODE;STATE;GET>" % self.name)
 
-        valid values are OFF, COOLING, and HEATING
-        """
-        mode = self._query("<%s;SMARTMODE;STATE;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @smartmode.setter
     def smartmode(self, mode):
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'cooling':
-            mode = 'COOLING'
-        elif mode.lower() == 'heating':
-            mode = 'HEATING'
-        else:
-            LOGGER("%s is an invalid smartmode" % mode)
-            return 1
+        """
+        Sets the fan's smartmode setting.
+
+        :param mode: valid values are OFF, COOLING, and HEATING
+        """
+        mode = mode.upper()
+        if mode != "OFF" and mode != "COOLING" and mode != " HEATING":
+            LOGGER.error("%s is an invalid smartmode" % mode)
+
         self._send_command("<%s;SMARTMODE;STATE;SET;%s>" % (self.name, mode))
         self._update_cache("SMARTMODE;ACTUAL", mode)
-        return 0  # return something rather than cause an exception
 
     @property
     def whoosh(self):
-        """Set or retrieve whoosh mode.
+        """Retrieve whoosh mode.
 
         This can have a ten second delay since there is no known one item
         request to retrieve status
@@ -697,6 +639,13 @@ class SenseMe:
 
     @whoosh.setter
     def whoosh(self, whoosh_on):
+        """Set the whoosh mode.
+
+        This can have a ten second delay since there is no known one item
+        request to retrieve status
+
+        :param whoosh_on: valid values are True or False
+        """
         if whoosh_on:
             self._send_command("<%s;FAN;WHOOSH;ON>" % self.name)
             self._update_cache("FAN;WHOOSH;STATUS", "ON")
@@ -704,31 +653,30 @@ class SenseMe:
             self._send_command("<%s;FAN;WHOOSH;OFF>" % self.name)
             self._update_cache("FAN;WHOOSH;STATUS", "OFF")
 
+    # The following properties are specific to haiku fans
+    # add-on light modules.  Most of these apply to the
+    # standalone light units as well
 
-
-    """
-    The following properties are specific to haiku fans   
-    add-on light modules.  Most of these apply to the     
-    standalone light units as well                        
-    """
     @property
     def brightness(self):
-        """Returns/sets light brightness.
-
-        Valid values are between 0 and 16.
-        0 is off, 16 is max.
-        """
+        """Returns light brightness."""
         # workaround for https://github.com/TomFaulkner/SenseMe/issues/38
         for _ in range(2):
             result = self._query("<%s;LIGHT;LEVEL;GET;ACTUAL>" % self.name)
             try:
                 return int(result)
             except ValueError:
-                if result == 'OFF':
+                if result == "OFF":
                     return 0
         return 0  # return something rather than cause an exception
+
     @brightness.setter
     def brightness(self, light):
+        """
+        Sets light brightness.
+
+        :param lightL Valid values are between 0 and 16.
+        """
         if light > 16:
             light = 16
         elif light < 0:
@@ -737,130 +685,131 @@ class SenseMe:
         self._update_cache("LIGHT;LEVEL;ACTUAL", str(light))
 
     @property
-    def minbrightness(self):
-        """ Returns the add-on lights minimum brightness setting.
-
-        valid values are 0-16
-        """
+    def min_brightness(self):
+        """Returns the add-on lights minimum brightness setting."""
         brightness = self._query("<%s;LIGHT;LEVEL;GET;MIN>" % self.name)
         LOGGER.debug(brightness)
 
         return brightness
 
-    @minbrightness.setter
-    def minbrightness(self, light):
+    @min_brightness.setter
+    def min_brightness(self, light):
+        """
+        Sets the add-on lights minimum brightness setting.
+
+        :param light: valid values are 0-16
+        """
         if light > 16:
             light = 16
         elif light < 0:
             light = 0
 
-        self._send_command("<%s;LIGHT;LEVEL;MIN;%s>" % (self.name, \
-                                                              light))
+        self._send_command("<%s;LIGHT;LEVEL;MIN;%s>" % (self.name, light))
         self._update_cache("LIGHT;LEVEL;MIN", light)
-        return 0
 
     @property
-    def maxbrightness(self):
-        """ Returns the add-on maximum brightness setting.
+    def max_brightness(self):
+        """Returns the add-on lights maximum brightness setting."""
+        return int(self._query("<%s;LIGHT;LEVEL;GET;MAX>" % self.name))
 
-        valid values are 0-16
+    @max_brightness.setter
+    def max_brightness(self, light):
         """
-        brightness = self._query("<%s;LIGHT;LEVEL;GET;MAX>" % self.name)
-        LOGGER.debug(brightness)
+        Sets the add-on lights maximum brightness setting.
 
-        return brightness
-
-    @maxbrightness.setter
-    def maxbrightness(self, light):
+        :param light: valid values are 0-16
+        """
         if light > 16:
             light = 16
         elif light < 0:
             light = 0
 
-        self._send_command("<%s;LIGHT;LEVEL;MAX;%s>" % (self.name, \
-                                                              light))
+        self._send_command("<%s;LIGHT;LEVEL;MAX;%s>" % (self.name, light))
         self._update_cache("LIGHT;LEVEL;MAX", light)
-        return 0
 
     @property
-    def roomsettings_brightnesslimits(self):
-        """
-        returns a tuple of the min and max light brightnesses the room supports
-        """
+    def room_settings_brightness_limits(self):
+        """Returns a tuple of the min and max light brightnesses the room supports"""
         raw = self._queryraw("<%s;LIGHT;BOOKENDS;GET>" % self.name)
 
-        #grab all between the parens
-        raw = raw[raw.find("(")+1:raw.find(")")]
+        # grab all between the parens
+        raw = raw[raw.find("(") + 1 : raw.find(")")]
 
-        vals = raw.split(';')
-        return (int(vals[3]),int(vals[4]))
+        vals = raw.split(";")
+        return int(vals[3]), int(vals[4])
 
-    @roomsettings_brightnesslimits.setter
-    def roomsettings_brightnesslimits(self, limits):
+    @room_settings_brightness_limits.setter
+    def room_settings_brightness_limits(self, limits):
+        """
+        Sets a tuple of the min and max light brightnesses the room supports
+
+        :params limits: [min,max]
+        """
         if limits[0] >= limits[1]:
             LOGGER.debug("minbrightness cannot exceed maxbrightness")
-            return
-
-        self._send_command("<%s;LIGHT;BOOKENDS;SET;%s;%s>" % (self.name,
-                                                            limits[0],
-                                                            limits[1]))
+        self._send_command(
+            "<%s;LIGHT;BOOKENDS;SET;%s;%s>" % (self.name, limits[0], limits[1])
+        )
 
     def dec_brightness(self, decrement=1):
-        """Decreases fan speed by decrement value, default is 1."""
+        """
+        Decreases fan speed by decrement value, default is 1.
+
+        :param decrement: number of steps to decrement with the call
+        """
         self.brightness -= decrement
 
     def inc_brightness(self, increment=1):
-        """Increases brighness by increment value, default is 1."""
+        """
+        Increases brightness by increment value, default is 1.
+
+        :param increment: number of steps to increment with the call
+        """
         self.brightness += increment
 
     @property
-    def isfanlightinstalled(self):
-        """ Returns if the optional light module is installed in the fan
-
-        returns true if present or false if not
+    def is_fan_light_installed(self):
         """
-        mode = self._query("<%s;DEVICE;LIGHT;GET>" % self.name)
-        LOGGER.debug(mode)
+         Returns if the optional light module is installed in the fan
 
-        return mode.lower() == 'present'
+         :return True if present or False if not
+         """
+        mode = self._query("<%s;DEVICE;LIGHT;GET>" % self.name)
+        return mode.lower() == "present"
 
     @property
     def light_motionmode(self):
-        """ Returns/sets the light motion sensor
+        """Returns the if the add on light responds to the motion sensor"""
+        return self._query("<%s;LIGHT;AUTO;GET>" % self.name)
 
-        valid values are OFF and ON
-        """
-        mode = self._query("<%s;LIGHT;AUTO;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        return mode.lower()
     @light_motionmode.setter
     def light_motionmode(self, mode):
+        """
+        Sets the if the add on light responds to the motion sensor
 
-        if mode.lower() == 'off':
-            mode = 'OFF'
-        elif mode.lower() == 'on':
-            mode = 'ON'
+        :params mode: valid values are OFF and ON
+        """
+        mode = mode.upper()
+        if mode != "ON" and mode != "OFF":
+            LOGGER.error("%s is an invalid light motion mode" % mode)
         else:
-            print("%s is an invalid smartmode" % mode)
-            return 1
-        self._send_command("<%s;LIGHT;AUTO;%s>" % (self.name, mode))
-        self._update_cache("LIGHT;AUTO", mode)
-        return 0  # return something rather than cause an exception
+            self._send_command("<%s;LIGHT;AUTO;%s>" % (self.name, mode))
+            self._update_cache("LIGHT;AUTO", mode)
 
     @property
     def light_powered_on(self):
-        """Return or state of light.
-
-        Power On = True
-        Power Off = False
-        """
+        """Returns True if the lige is on False if its off"""
         if self._query("<%s;LIGHT;PWR;GET>" % self.name) == "ON":
             return True
         return False
 
     @light_powered_on.setter
     def light_powered_on(self, power_on=True):
+        """
+        Turns the addon light module on or off
+
+        :param power_on: True equals on, False equals off
+        """
         if power_on:
             self._send_command("<%s;LIGHT;PWR;ON>" % self.name)
             self._update_cache("LIGHT;PWR", "ON")
@@ -871,72 +820,6 @@ class SenseMe:
     def light_toggle(self):
         """Toggle power state of light."""
         self.light_powered_on = not self.light_powered_on
-
-
-
-
-    """
-    The following properties are specific to haiku        
-    standalone light modules.  none of these have been    
-    tested                                                
-    """
- 
-    @property
-    def light_hue(self):
-        """ Returns/sets the standalone lights hue
-
-        valid values are a kelvin between 2200 and 5000
-        """
-        color = self._query("<%s;LIGHT;COLOR;VALUE;GET>" % self.name)
-        LOGGER.debug(hue)
-
-        return hue
-    @light_hue.setter
-    def light_hue(self, color):
-        if hue > 5000:
-            hue = 5000
-        elif hue < 2200:
-            hue = 2200
-
-        self._send_command("<%s;LIGHT;COLOR;VALUE;SET;%s>" % (self.name, hue))
-        self._update_cache("LIGHT;COLOR", hue)
-        return 0  # return something rather than cause an exception
-
-    @property
-    def islightcolor(self):
-        """ Returns  if the standalone light support changing hues
-
-        returns true if supported or false if not
-        """
-        mode = self._query("<%s;DEVICE;LIGHT;COLOR;GET>" % self.name)
-        LOGGER.debug(mode)
-
-        if mode.lower() != 'present':
-            return False
-        return True
-
-
-
-
-
-#TODO
-#(Media Room Wall Control;DEVICE;INDICATORS;ON)
-#(Media Room Wall Control;DEVICE;SERVER;PRODUCTION)
-#(Media Room Wall Control;ERRORLOG;ENTRIES;NUM;10)
-#(Media Room Wall Control;ERRORLOG;ENTRIES;MAX;10)
-#(Media Room Wall Control;FW;NAME;FW000004)
-#(Media Room Wall Control;FW;FW000004;2.5.0)
-#(Media Room Wall Control;GROUP;LIST;Media Room)
-#(Media Room Wall Control;GROUP;ROOM;TYPE;21)
-#(Media Room Wall Control;NAME;VALUE;Media Room Wall Control)
-#(Media Room Wall Control;NW;AP;STATUS;OFF)
-#(Media Room Wall Control;NW;DHCP;OFF)
-#(Media Room Wall
-# Control;NW;PARAMS;ACTUAL;192.168.1.227;255.255.255.0;192.168.1.1)
-#(Media Room Wall Control;NW;SSID;PrincessCastle)
-#(Media Room Wall Control;NW;TOKEN;3a47f6d7-af5a-451c-ace8-91676048a660)
-#(Media Room Wall Control;TIME;VALUE;2018-09-01T20:13:09Z)
-#(Media Room Wall Control;WALLCONTROL;CONFIGURE;FANSPEED;LIGHTLEVEL)
 
     @staticmethod
     def listen(cycles=30):
@@ -1028,8 +911,11 @@ class SenseMe:
             else:
                 return False
 
-    #this is a hack to deal with the NW;PARAM command returning a multi-value
-    #it needs better clean up if SenseMe starts using that pattern more often
+    """
+    This is a hack to deal with the NW;PARAM command returning a multi-value
+    it needs better clean up if SenseMe starts using that pattern more often
+    """
+
     def _queryraw(self, msg):
         sock = socket.socket()
         sock.settimeout(5)
@@ -1193,7 +1079,7 @@ class SenseMe:
         :param attribute: The attribute you seek
         :return: The value you find
         """
-        if attribute == "SNSROCC;STATUS":  # doesn't get retrieeved in get_all
+        if attribute == "SNSROCC;STATUS":  # doesn't get retrieved in get_all
             return self._query("<%s;SNSROCC;STATUS;GET>" % self.name)
         else:
             response_dict = self._get_all()
@@ -1318,7 +1204,7 @@ def discover(devices_to_find=6, time_to_wait=5):
                     SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
                 )
 
-            time.sleep(.5)
+            time.sleep(0.5)
             if (
                 start_time + time_to_wait < time.time()
                 or len(devices) >= devices_to_find
@@ -1692,7 +1578,7 @@ def discover(devices_to_find=6, time_to_wait=5):
                     SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
                 )
 
-            time.sleep(.5)
+            time.sleep(0.5)
             if (
                 start_time + time_to_wait < time.time()
                 or len(devices) >= devices_to_find
