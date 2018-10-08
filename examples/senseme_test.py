@@ -459,6 +459,9 @@ def main():
     if not all([opts.ip, opts.name]):
         print("IP and the fan name are required to work")
         return 1
+    elif len(args) != 0:
+        print("Unknown options specified: " + " ".join(args))
+        return 1
     else:
         fan = SenseMe(ip=opts.ip, name=opts.name, model=opts.model)
 

@@ -904,12 +904,8 @@ class SenseMe:
             else:
                 return False
 
-    """
-    This is a hack to deal with the NW;PARAM command returning a multi-value
-    it needs better clean up if SenseMe starts using that pattern more often
-    """
-
     def _queryraw(self, msg):
+        """An alternate version of query that does not do a default regex match on the results"""
         sock = socket.socket()
         sock.settimeout(5)
 
