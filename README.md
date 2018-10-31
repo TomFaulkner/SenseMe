@@ -88,7 +88,7 @@ Control the fan:
         fan.brightness = intensity
         time.sleep(1)
 
-    # export details to json / xml / str(dict)
+    # export details to json / xml / str (as `str(dict)`)
     fan.json
     fan.xml
     fan.dict  # nested dict
