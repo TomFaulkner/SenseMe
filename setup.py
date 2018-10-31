@@ -31,7 +31,7 @@ with open('README.md') as readme:
 
 setup(
     name="SenseMe",
-    version="0.1.5",
+    version="0.1.6",
     description="HaikuHome SenseMe API for fans and lights",
     long_description=long_description,
     long_description_content_type="text/markdown",
