@@ -34,7 +34,7 @@ Some ideas for future related projects and features:
 
  9. Use protocol to control other devices by attaching an Arduino or Pi
 
- 10. Discover the rest of the protocol. (Run strings on the apps and some packet sniffing.)
+ 10. ~~Discover the rest of the protocol. (Run strings on the apps and some packet sniffing.)~~
 
  11. More examples
 
