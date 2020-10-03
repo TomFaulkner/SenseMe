@@ -118,3 +118,5 @@ Then run `senseme_cli` with one of the following options.
 Python 3.6 is required to use this library.
 SenseMe devices communicate on UDP port 31415 using broadcast and unicast traffic. Any firewall will have to allow this through.
 
+# Concurrent fan control and real-time data collecting
+[Mike Lawrence made a fork](https://github.com/mikelawrence/aiosenseme) that improves upon some of the limitations in this library and makes use of concurrency to talk to multiple devices simultaneously. I haven't use his library, but it looks promising.
