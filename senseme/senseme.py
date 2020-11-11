@@ -12,6 +12,7 @@ import math
 import re
 import socket
 import time
+from typing import Tuple
 
 from .lib import MWT, BackgroundLoop
 from .lib.xml import data_to_xml
@@ -66,7 +67,6 @@ class SenseMe:
             self.ip = ip
             self.name = name
             self.mac = mac
-            self.details = ""
             self.model = model
             self.series = series
         self.monitor_frequency = kwargs.get("monitor_frequency", 45)
@@ -826,6 +826,47 @@ class SenseMe:
             m = sock.recvfrom(1024)
             LOGGER.info(m)
 
+
+    def discover_single_device(self):
+        """Discover a single device.
+
+        Called during __init__ if the device name or IP address is missing.
+
+        This function will discover only the first device to respond if both
+        name and IP were not provided on instantiation. If there is only one
+        device in the home this will work well. Otherwise, use the discover
+        function of the module rather than this one.
+        """
+        data = "<ALL;DEVICE;ID;GET>".encode("utf-8")
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.bind(("", 0))
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        LOGGER.debug("Sending broadcast.")
+        s.sendto(data, ("<broadcast>", self.PORT))
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        LOGGER.debug("Listening...")
+        try:
+            s.bind(("", self.PORT))
+        except OSError as e:
+            # Address already in use
+            LOGGER.exception(
+                "Port is in use or could not be opened." "Is another instance running?"
+            )
+            raise OSError
+        else:
+            try:
+                m = s.recvfrom(1024)
+                LOGGER.info(m)
+                if not m:
+                    LOGGER.error("Didn't receive response.")
+                else:
+                    self.name, self.mac, self.model, self.series, self.ip = decode_discovery(m)
+                    LOGGER.info(self.name, self.mac, self.model, self.series)
+            except OSError as e:
+                LOGGER.critical("No device was found.\n%s" % e)
+                raise OSError
+
     def _send_command(self, msg):
         sock = socket.socket()
         sock.settimeout(5)
@@ -1103,6 +1144,18 @@ class SenseMe:
         """Stop the monitor."""
         self._monitoring = False
         self._background_monitor.stop()
+    
+    @staticmethod
+    def listen(cycles=30):
+        """Listen for broadcasts and logs them for debugging purposes.
+
+        Listens for cycles iterations
+        """
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("", 31415))
+        for x in range(1, cycles):
+            m = sock.recvfrom(1024)
+            LOGGER.info(m)
 
 
 def discover(devices_to_find=6, time_to_wait=5):
@@ -1133,14 +1186,7 @@ def discover(devices_to_find=6, time_to_wait=5):
                 message = b""
             if message:
                 LOGGER.info("Received a message")
-                message_decoded = message[0].decode("utf-8")
-                res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
-                # TODO: Parse this properly rather than regex
-                name = res.group(1)
-                mac = res.group(2)
-                model = res.group(3)
-                series = res.group(4)
-                ip = message[1][0]
+                name, mac, model, series, ip = decode_discovery(message)
                 devices.append(
                     SenseMe(ip=ip, name=name, model=model, series=series, mac=mac)
                 )
@@ -1159,62 +1205,14 @@ def discover(devices_to_find=6, time_to_wait=5):
     finally:
         s.close()
 
-    @staticmethod
-    def listen(cycles=30):
-        """Listen for broadcasts and logs them for debugging purposes.
-
-        Listens for cycles iterations
-        """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.bind(("", 31415))
-        for x in range(1, cycles):
-            m = sock.recvfrom(1024)
-            LOGGER.info(m)
-
-    def discover_single_device(self):
-        """Discover a single device.
-
-        Called during __init__ if the device name or IP address is missing.
-
-        This function will discover only the first device to respond if both
-        name and IP were not provided on instantiation. If there is only one
-        device in the home this will work well. Otherwise, use the discover
-        function of the module rather than this one.
-        """
-        data = "<ALL;DEVICE;ID;GET>".encode("utf-8")
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.bind(("", 0))
-        s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        LOGGER.debug("Sending broadcast.")
-        s.sendto(data, ("<broadcast>", self.PORT))
-
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        LOGGER.debug("Listening...")
-        try:
-            s.bind(("", self.PORT))
-        except OSError as e:
-            # Address already in use
-            LOGGER.exception(
-                "Port is in use or could not be opened." "Is another instance running?"
-            )
-            raise OSError
-        else:
-            try:
-                m = s.recvfrom(1024)
-                LOGGER.info(m)
-                if not m:
-                    LOGGER.error("Didn't receive response.")
-                else:
-                    self.details = m[0].decode("utf-8")
-                    res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", self.details)
-                    # TODO: Parse this properly rather than regex
-                    self.name = res.group(1)
-                    self.mac = res.group(2)
-                    self.model = res.group(3)
-                    self.series = res.group(4)
-                    self.ip = m[1][0]
-
-                    LOGGER.info(self.name, self.mac, self.model, self.series)
-            except OSError as e:
-                LOGGER.critical("No device was found.\n%s" % e)
-                raise OSError
+def decode_discovery(message: Tuple[bytes, Tuple[str, str]]) -> Tuple:
+    """ Takes a message in the return format of socket.recvfrom and returns decoded SenseMe discovery information """
+    message_decoded = message[0].decode("utf-8")
+    res = re.match("\((.*);DEVICE;ID;(.*);(.*),(.*)\)", message_decoded)
+    # TODO: Parse this properly rather than regex
+    name = res.group(1)
+    mac = res.group(2)
+    model = res.group(3)
+    series = res.group(4)
+    ip = message[1][0]
+    return name, mac, model, series, ip

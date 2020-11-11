@@ -49,5 +49,7 @@ setup(
     ],
     keywords="HaikuHome SenseMe fan light home automation bigassfans",
     python_requires=">=3.6",
-    scripts=['bin/senseme_cli']
+    scripts=['bin/senseme_cli'],
+    tests_require=["pytest"],
+    setup_requires=["pytest-runner"]
 )
